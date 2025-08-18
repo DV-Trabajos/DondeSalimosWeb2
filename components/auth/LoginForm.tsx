@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle, Info, UserPlus } from "lucide-react";
+import { AlertCircle, Info, UserPlus } from "lucide-react";
+import { GoogleLogin, CredentialResponse, } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
-import { GoogleLogin, CredentialResponse, } from "@react-oauth/google";
 
 type AuthErrorType =
   | "ACCOUNT_NOT_FOUND"
@@ -28,14 +28,20 @@ export function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
   const { toast } = useToast();
-  const { login } = useAuth();
+  //const { login } = useAuth();
+  const { loginWithGoogleIdToken } = useAuth();
   const router = useRouter();
 
   const handleGoogleSuccess = async (response: CredentialResponse) => {
     setAuthError(null);
     setGoogleLoading(true);
 
-    try {
+    if (!response.credential) return;
+    await loginWithGoogleIdToken(response.credential);
+  
+  };
+
+    /*try {
       const credential = response.credential;
       const apiUrl = "https://localhost:7283/api/usuarios/iniciarSesionConGoogle"
 
@@ -46,11 +52,6 @@ export function LoginForm() {
       });
 
       const authResponse = await res.json();
-
-      /*console.log("Respuesta de la API:", {
-            status: authResponse.status,
-            statusText: authResponse.statusText,
-          })*/
 
       if (!res.ok) {
         throw new Error(authResponse.Mensaje || "Auth failed");
@@ -85,7 +86,7 @@ export function LoginForm() {
     } finally {
       setGoogleLoading(false);
     }
-  };
+  };*/
 
   const handleGoogleError = () => {
     const err: AuthError = {

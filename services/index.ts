@@ -84,7 +84,7 @@ export interface Reserva {
 }
 
 // Exportamos la utilidad fetchWithErrorHandling
-export const API_BASE_URL = "https://localhost:7283/api"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // Función para manejar errores en las peticiones fetch
 export async function fetchWithErrorHandling(url: string, options: RequestInit = {}): Promise<any> {
@@ -658,10 +658,12 @@ export const reservaService = {
     }
 
     const reservaToSend = {
-      ...reserva,
-      tiempoTolerancia,
-      // Asegurarse de que el campo reserva exista
-      reserva: reserva.reserva || `Reserva para ${reserva.comenzales} personas`,
+      iD_Usuario: Number(reserva.iD_Usuario),
+      iD_Comercio: Number(reserva.iD_Comercio),
+      fechaReserva: reserva.fechaReserva,
+      tiempoTolerancia: reserva.tiempoTolerancia,
+      comenzales: Number(reserva.comenzales),
+      estado: Boolean(reserva.estado),
     }
 
     return fetchWithErrorHandling(`${API_BASE_URL}/reservas/crear`, {
@@ -669,8 +671,7 @@ export const reservaService = {
       body: JSON.stringify(reservaToSend),
     })
   },
-
-  // También actualizar la función update para mantener consistencia
+  
   update: async (id: number, reserva: Partial<Reserva>): Promise<Reserva> => {
     // Formatear tiempoTolerancia si existe
     let tiempoTolerancia = reserva.tiempoTolerancia
@@ -687,13 +688,15 @@ export const reservaService = {
         tiempoTolerancia = "00:15:00" // Valor por defecto: 15 minutos
       }
     }
-
+    
     const reservaToSend = {
       ...reserva,
       iD_Reserva: id,
+      iD_Usuario: Number(reserva.iD_Usuario),
+      iD_Comercio: Number(reserva.iD_Comercio),
       tiempoTolerancia: tiempoTolerancia || reserva.tiempoTolerancia,
-      // Asegurarse de que el campo reserva exista
-      reserva: reserva.reserva || `Reserva actualizada para ${reserva.comenzales || ""} personas`,
+      comenzales: Number(reserva.comenzales),
+      estado: Boolean(reserva.estado),
     }
 
     return fetchWithErrorHandling(`${API_BASE_URL}/reservas/actualizar/${id}`, {

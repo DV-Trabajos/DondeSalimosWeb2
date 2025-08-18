@@ -1,16 +1,13 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth"
-import { auth } from "@/lib/firebase"
 import type { Usuario } from "@/services"
 
 interface AuthContextType {
   user: Usuario | null
-  firebaseUser: FirebaseUser | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (userData: Usuario) => void
+  loginWithGoogleIdToken: (idToken: string) => Promise<void>;
   logout: () => Promise<void>
   updateUser: (userData: Partial<Usuario>) => void
   checkUserPermission: (permission: string) => boolean
@@ -18,70 +15,84 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Usuario | null>(null)
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:7283/api";
 
-  // Cargar usuario desde localStorage al inicializar
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<Usuario | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 1) Hidratar sesión desde cookie HttpOnly
   useEffect(() => {
-    const savedUser = localStorage.getItem("donde-salimos-user")
-    if (savedUser) {
+    let cancelled = false;
+    (async () => {
       try {
-        const userData = JSON.parse(savedUser)
-        setUser(userData)
-      } catch (error) {
-        console.error("Error al cargar usuario guardado:", error)
-        localStorage.removeItem("donde-salimos-user")
+        const res = await fetch(`${API_BASE_URL}/usuarios/me`, {
+          method: "GET",
+          credentials: "include", // <- envia la cookie
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) {
+          setUser(null);
+          return;
+        }
+        const data = await res.json(); // { Usuario }
+        if (!cancelled) setUser(data.Usuario ?? null);
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    }
-  }, [])
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-  // Escuchar cambios en el estado de autenticación de Firebase
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setFirebaseUser(firebaseUser)
-
-      // Si no hay usuario de Firebase, limpiar el estado
-      if (!firebaseUser) {
-        setUser(null)
-        localStorage.removeItem("donde-salimos-user")
-      }
-
-      setIsLoading(false)
-    })
-
-    return () => unsubscribe()
-  }, [])
-
-  const login = (userData: Usuario) => {
-    console.log("DENTRO DEL LOGIN: ", userData);
-    setUser(userData)
-    // Guardar usuario en localStorage para persistencia
-    localStorage.setItem("donde-salimos-user", JSON.stringify(userData))
-  }
-
-  const logout = async () => {
+  // 2) Login con ID Token de Google (sin Firebase)
+  const loginWithGoogleIdToken = async (idToken: string) => {
+    setIsLoading(true);
     try {
-      await auth.signOut()
-      setUser(null)
-      setFirebaseUser(null)
-      // Limpiar localStorage
-      localStorage.removeItem("donde-salimos-user")
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error)
-      throw error
-    }
-  }
+      const res = await fetch(`${API_BASE_URL}/usuarios/iniciarSesionConGoogle`, {
+        method: "POST",
+        credentials: "include", // <- importante para recibir Set-Cookie
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          // Si implementás CSRF double-submit:
+          // "X-CSRF-Token": getCsrfTokenFromCookie(),
+        },
+        body: JSON.stringify({ idToken }), // ajustá si tu API espera otro shape
+      });
 
-  const updateUser = (userData: Partial<Usuario>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData }
-      setUser(updatedUser)
-      // Actualizar localStorage
-      localStorage.setItem("donde-salimos-user", JSON.stringify(updatedUser))
+      const data = await res.json(); // { Usuario, ExisteUsuario, Mensaje }
+      if (!res.ok || !data.ExisteUsuario) {
+        throw new Error(data?.Mensaje || "No fue posible iniciar sesión");
+      }
+
+      // Si el server seteó la cookie, ya estás autenticado.
+      setUser(data.Usuario ?? null);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
+
+  // 3) Logout (invalida la cookie server-side)
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/usuarios/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+    } catch { /* ignore */ }
+    finally {
+      setUser(null);
+      setIsLoading(false);
+    }
+  };
+
+  const updateUser = (patch: Partial<Usuario>) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
 
   // Función para verificar permisos del usuario
   const checkUserPermission = (permission: string): boolean => {
@@ -124,27 +135,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return permissions.includes(permission)
   }
 
-  const value: AuthContextType = {
-    user,
-    firebaseUser,
-    isAuthenticated: !!user && !!firebaseUser,
-    isLoading,
-    login,
-    logout,
-    updateUser,
-    checkUserPermission,
-  }
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        loginWithGoogleIdToken,
+        logout,
+        updateUser,
+        checkUserPermission,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
-}
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
+};
 
 export function useRequireAuth() {
   const { isAuthenticated, isLoading } = useAuth()

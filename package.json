@@ -1,12 +1,15 @@
 {
-  "name": "my-v0-project",
+  "name": "dondesalimos-web",
   "version": "0.1.0",
   "private": true,
+  "engines": { "node": ">=18.18 <23" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -43,8 +46,6 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "embla-carousel-react": "8.5.1",
-    "firebase": "latest",
-    "firebase-admin": "latest",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
