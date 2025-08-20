@@ -1,101 +1,90 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { useRouter } from "next/navigation";
 import type { Usuario } from "@/services"
 
-interface AuthContextType {
-  user: Usuario | null
-  isAuthenticated: boolean
-  isLoading: boolean
+type AuthContextType = {
+  user: Usuario | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
   loginWithGoogleIdToken: (idToken: string) => Promise<void>;
-  logout: () => Promise<void>
-  updateUser: (userData: Partial<Usuario>) => void
-  checkUserPermission: (permission: string) => boolean
-}
+  logout: () => Promise<void>;
+  updateUser: (patch: Partial<Usuario>) => void;
+  checkUserPermission: (perm: string) => boolean;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:7283/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7283/api";
+
+const LS_USER_KEY = "APP_USER";
+const LS_TOKEN_KEY = "APP_TOKEN";
+
+function safeParse<T>(v: string | null): T | null {
+  try {
+    return v ? (JSON.parse(v) as T) : null;
+  } catch {
+    return null;
+  }
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-  // 1) Hidratar sesión desde cookie HttpOnly
+  // Restaurar sesión desde localStorage
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/usuarios/me`, {
-          method: "GET",
-          credentials: "include", // <- envia la cookie
-          headers: { Accept: "application/json" },
-        });
-        if (!res.ok) {
-          setUser(null);
-          return;
-        }
-        const data = await res.json(); // { Usuario }
-        if (!cancelled) setUser(data.Usuario ?? null);
-      } catch {
-        if (!cancelled) setUser(null);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    const storedUser = safeParse<Usuario>(typeof window !== "undefined" ? localStorage.getItem(LS_USER_KEY) : null);
+    setUser(storedUser);
+    setIsLoading(false);
   }, []);
 
-  // 2) Login con ID Token de Google (sin Firebase)
   const loginWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/iniciarSesionConGoogle`, {
         method: "POST",
-        credentials: "include", // <- importante para recibir Set-Cookie
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          // Si implementás CSRF double-submit:
-          // "X-CSRF-Token": getCsrfTokenFromCookie(),
-        },
-        body: JSON.stringify({ idToken }), // ajustá si tu API espera otro shape
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ idToken }),
       });
+      
+      const data = await res.json(); // { usuario, existeUsuario, mensaje }
 
-      const data = await res.json(); // { Usuario, ExisteUsuario, Mensaje }
-      if (!res.ok || !data.ExisteUsuario) {
-        throw new Error(data?.Mensaje || "No fue posible iniciar sesión");
+      if (!res.ok || !data?.existeUsuario) {
+        throw new Error(data?.mensaje || "No fue posible iniciar sesión");
       }
 
-      // Si el server seteó la cookie, ya estás autenticado.
-      setUser(data.Usuario ?? null);
+      // Guardar usuario
+      setUser(data.usuario ?? null);
+      localStorage.setItem(LS_USER_KEY, JSON.stringify(data.usuario ?? null));
+
+      router.replace("/dashboard");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 3) Logout (invalida la cookie server-side)
   const logout = async () => {
-    setIsLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/usuarios/logout`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-    } catch { /* ignore */ }
-    finally {
-      setUser(null);
-      setIsLoading(false);
-    }
+    // Si tu API tiene endpoint de logout futuro, podrías llamarlo acá.
+    // Por ahora sólo limpiamos front.
+    localStorage.removeItem(LS_USER_KEY);
+    localStorage.removeItem(LS_TOKEN_KEY);
+    setUser(null);
+    router.replace("/auth/login");
   };
 
   const updateUser = (patch: Partial<Usuario>) => {
-    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+    setUser((prev) => {
+      const next = prev ? { ...prev, ...patch } : prev;
+      if (next) localStorage.setItem(LS_USER_KEY, JSON.stringify(next));
+      return next;
+    });
   };
 
   // Función para verificar permisos del usuario
-  const checkUserPermission = (permission: string): boolean => {
+  const checkUserPermission = (_perm: string) => {
     if (!user) return false
 
     // Obtener el rol del usuario
@@ -129,10 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         "profile.view", // Mi Perfil
       ],
     }
-
-    // Verificar si el rol tiene el permiso específico
-    const permissions = rolePermissions[userRole] || []
-    return permissions.includes(permission)
   }
 
   return (

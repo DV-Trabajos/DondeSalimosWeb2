@@ -7,18 +7,14 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 
-interface ProtectedRouteProps {
-  children: React.ReactNode
-}
-
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user, firebaseUser } = useAuth()
-  const router = useRouter()
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     // Solo redirigir si ya terminó de cargar y no está autenticado
     if (!isLoading && !isAuthenticated) {
-      router.push("/auth/login")
+      router.replace("/auth/login");
     }
   }, [isAuthenticated, isLoading, router])
 

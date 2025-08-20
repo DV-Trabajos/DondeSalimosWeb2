@@ -1,136 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Info, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { GoogleLogin, CredentialResponse, } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import Image from "next/image";
 
-type AuthErrorType =
-  | "ACCOUNT_NOT_FOUND"
-  | "NETWORK_ERROR"
-  | "SERVER_ERROR"
-  | "INVALID_CREDENTIALS"
-  | "UNKNOWN";
 
-interface AuthError {
-  type: AuthErrorType;
-  message: string;
-}
-
-export function LoginForm() {
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [authError, setAuthError] = useState<AuthError | null>(null);
+export default function LoginForm() {
+  const { loginWithGoogleIdToken, isLoading } = useAuth();
   const { toast } = useToast();
-  //const { login } = useAuth();
-  const { loginWithGoogleIdToken } = useAuth();
   const router = useRouter();
 
-  const handleGoogleSuccess = async (response: CredentialResponse) => {
-    setAuthError(null);
-    setGoogleLoading(true);
+  const handleSuccess = async (resp: CredentialResponse) => {
+    try {
+      if (!resp.credential) throw new Error("No se recibió el token de Google");
+      await loginWithGoogleIdToken(resp.credential);
 
-    if (!response.credential) return;
-    await loginWithGoogleIdToken(response.credential);
-  
-  };
-
-    /*try {
-      const credential = response.credential;
-      const apiUrl = "https://localhost:7283/api/usuarios/iniciarSesionConGoogle"
-
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: credential }),
-      });
-
-      const authResponse = await res.json();
-
-      if (!res.ok) {
-        throw new Error(authResponse.Mensaje || "Auth failed");
-      }
-
-      console.log("USUARIO: " , authResponse.usuario);
-
-      // Login en contexto y toast
-      login(authResponse.usuario);
-      toast({
-        title: "¡Bienvenido!",
-        description: "Sesión iniciada correctamente",
-      });
-
-      console.log("ANTES DE ENTRAR AL PUSH DASHBOARD", router);
-
-      router.push("/landing"); //("/dashboard");
-    } catch (err: any) {
-      console.error("Google login error:", err);
-      const genericError: AuthError = {
-        type: "UNKNOWN",
-        message:
-          err.message ||
-          "Ocurrió un error inesperado al iniciar sesión. Inténtalo de nuevo.",
-      };
-      setAuthError(genericError);
-      toast({
-        title: "Error",
-        description: genericError.message,
-        variant: "destructive",
-      });
-    } finally {
-      setGoogleLoading(false);
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message ?? "No se pudo iniciar sesión", variant: "destructive" });
     }
-  };*/
-
-  const handleGoogleError = () => {
-    const err: AuthError = {
-      type: "NETWORK_ERROR",
-      message:
-        "No se pudo conectar con Google. Verifica tu conexión e inténtalo de nuevo.",
-    };
-    setAuthError(err);
-    toast({
-      title: "Error de conexión",
-      description: err.message,
-      variant: "destructive",
-    });
+  
   };
 
   const handleCreateAccount = () => {
     router.push("/auth/register");
-  };
-
-  const getErrorIcon = (type: AuthErrorType) => {
-    switch (type) {
-      case "ACCOUNT_NOT_FOUND":
-        return <UserPlus className="h-4 w-4" />;
-      case "NETWORK_ERROR":
-      case "SERVER_ERROR":
-        return <AlertCircle className="h-4 w-4" />;
-      default:
-        return <Info className="h-4 w-4" />;
-    }
-  };
-
-  const getErrorVariant = (
-    type: AuthErrorType
-  ): "default" | "destructive" => {
-    switch (type) {
-      case "ACCOUNT_NOT_FOUND":
-        return "default";
-      case "NETWORK_ERROR":
-      case "SERVER_ERROR":
-      case "INVALID_CREDENTIALS":
-        return "destructive";
-      default:
-        return "default";
-    }
   };
 
   return (
@@ -168,35 +66,10 @@ export function LoginForm() {
             </CardHeader>
 
             <CardContent className="pb-3">
-              {authError && (
-                <Alert
-                  variant={getErrorVariant(authError.type)}
-                  className="mb-3"
-                >
-                  {getErrorIcon(authError.type)}
-                  <AlertDescription className="ml-2 text-xs">
-                    {authError.message}
-                    {authError.type === "ACCOUNT_NOT_FOUND" && (
-                      <div className="mt-2">
-                        <Button
-                          onClick={handleCreateAccount}
-                          variant="outline"
-                          size="sm"
-                          className="w-full h-7 text-xs bg-transparent"
-                        >
-                          <UserPlus className="mr-1 h-3 w-3" />
-                          Crear cuenta nueva
-                        </Button>
-                      </div>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-
               <div className="space-y-3">
                 <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
+                  onSuccess={handleSuccess}
+                  onError={() => toast({ title: "Error", description: "Google Login falló" })}
                   /*useOneTap // opcional: activa el prompt One Tap*/
                 />
 

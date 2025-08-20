@@ -1,5 +1,3 @@
-import { mapApiError } from "@/utils/errorUtils"
-
 export interface Usuario {
   iD_Usuario: number
   nombreUsuario: string
@@ -86,80 +84,36 @@ export interface Reserva {
 // Exportamos la utilidad fetchWithErrorHandling
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+function getAppToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("APP_TOKEN");
+}
+
 // Función para manejar errores en las peticiones fetch
-export async function fetchWithErrorHandling(url: string, options: RequestInit = {}): Promise<any> {
-  try {
-    // Configuración por defecto para todas las peticiones
-    const defaultOptions: RequestInit = {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      ...options,
-    }
+export async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
+  const token = getAppToken();
 
-    console.log(`Fetching: ${url}`)
+  const headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers ?? {}),
+  };
 
-    // Agregar timeout para evitar que la petición se quede colgada
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 segundos de timeout
-
-    const response = await fetch(url, {
-      ...defaultOptions,
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
-    // Si la respuesta no es exitosa, lanzar un error
-    if (!response.ok) {
-      const errorText = await response.text()
-      let errorMessage = `Error ${response.status}`
-
-      try {
-        // Intentar parsear el error como JSON
-        const errorJson = JSON.parse(errorText)
-        errorMessage = errorJson.message || errorJson.error || errorText
-      } catch {
-        errorMessage = errorText || errorMessage
-      }
-
-      throw new Error(errorMessage)
-    }
-
-    // Si la respuesta está vacía, devolver null
-    const contentType = response.headers.get("content-type")
-    if (!contentType || !contentType.includes("application/json")) {
-      return null
-    }
-
-    // Devolver los datos como JSON
-    return await response.json()
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("La solicitud ha excedido el tiempo de espera. Por favor, inténtalo de nuevo.")
-    }
-
-    // Manejar errores de red de manera más amigable
-    if (error instanceof TypeError && error.message === "Failed to fetch") {
-      throw new Error("No se pudo conectar con el servidor. Verifica tu conexión a internet e inténtalo de nuevo.")
-    }
-
-    // Manejar otros errores de red comunes
-    if (error instanceof TypeError) {
-      throw new Error("Hubo un problema de conexión. Por favor, inténtalo de nuevo.")
-    }
-
-    // Si es un error que ya tiene un mensaje personalizado, mantenerlo
-    if (error instanceof Error) {
-      // Usar el sistema de mapeo de errores para obtener mensajes más amigables
-      const mappedError = mapApiError(error.message)
-      throw new Error(mappedError.message)
-    }
-
-    console.error("Error en la petición:", error)
-    throw error
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const txt = await res.text();
+    let msg = `Error ${res.status}`;
+    try {
+      const j = JSON.parse(txt);
+      msg = j.message || j.error || j.Mensaje || msg;
+    } catch {}
+    throw new Error(msg);
   }
+
+  if (res.status === 204) return;
+  const ct = res.headers.get("content-type") || "";
+  return ct.includes("application/json") ? res.json() : res.text();
 }
 
 // Servicio para Usuarios
@@ -175,13 +129,6 @@ export const usuarioService = {
   getByName: async (name: string): Promise<Usuario[]> => {
     return fetchWithErrorHandling(`${API_BASE_URL}/usuarios/buscarNombreUsuario/${name}`)
   },
-
-  /*create: async (usuario: Omit<Usuario, "iD_Usuario" | "fechaCreacion">): Promise<Usuario> => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/usuarios/crear`, {
-      method: "POST",
-      body: JSON.stringify(usuario),
-    })
-  },*/
 
   update: async (id: number, usuario: Partial<Usuario>): Promise<Usuario> => {
     // Asegurarse de que los campos requeridos estén presentes
