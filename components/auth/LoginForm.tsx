@@ -7,6 +7,7 @@ import { UserPlus } from "lucide-react";
 import { GoogleLogin, CredentialResponse, } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 

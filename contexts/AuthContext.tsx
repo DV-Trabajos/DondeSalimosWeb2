@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Usuario } from "@/services"
 
@@ -9,6 +9,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   isLoading: boolean;
   loginWithGoogleIdToken: (idToken: string) => Promise<void>;
+  registerWithGoogleIdToken: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (patch: Partial<Usuario>) => void;
   checkUserPermission: (perm: string) => boolean;
@@ -54,7 +55,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!res.ok || !data?.existeUsuario) {
         throw new Error(data?.mensaje || "No fue posible iniciar sesión");
-      }
+      }      
+
+      // Guardar usuario
+      setUser(data.usuario ?? null);
+      localStorage.setItem(LS_USER_KEY, JSON.stringify(data.usuario ?? null));
+
+      router.replace("/dashboard");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const registerWithGoogleIdToken = async (idToken: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuarios/registrarseConGoogle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const data = await res.json(); // { usuario, existeUsuario, mensaje }
+
+      if (!res.ok || !data?.existeUsuario) {
+        throw new Error(data?.mensaje || "Usuario existente, debe iniciar sesión");
+      }      
 
       // Guardar usuario
       setUser(data.usuario ?? null);
@@ -127,6 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         loginWithGoogleIdToken,
+        registerWithGoogleIdToken,
         logout,
         updateUser,
         checkUserPermission,
