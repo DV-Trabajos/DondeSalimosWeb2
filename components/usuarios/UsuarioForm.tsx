@@ -72,7 +72,6 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    console.log(`Cambiando ${name} a ${value}`)
     setErrors({ ...errors, [name]: "" })
 
     if (name === "iD_RolUsuario") {
@@ -81,7 +80,6 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
 
       // Verificar que sea un número válido
       if (!isNaN(rolId)) {
-        console.log(`Asignando iD_RolUsuario: ${rolId}`)
         setUsuario((prevState) => ({
           ...prevState,
           iD_RolUsuario: rolId,
@@ -231,8 +229,6 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
       if (isEditing && usuarioId) {
         usuarioData.iD_Usuario = usuarioId
       }
-
-      console.log("Enviando datos:", usuarioData)
 
       if (isEditing && usuarioId) {
         await usuarioService.update(usuarioId, usuarioData)

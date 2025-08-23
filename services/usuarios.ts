@@ -14,6 +14,16 @@ export const usuarioService = {
     return fetchWithErrorHandling(`${API_BASE_URL}/usuarios/buscarNombreUsuario/${name}`);
   },
 
+  exists: async (username: string): Promise<boolean> => {
+    const users = await fetchWithErrorHandling(
+      `${API_BASE_URL}/usuarios/buscarNombreUsuario/${username}`,
+    );
+
+    return Array.isArray(users)
+      ? users.some((user: Usuario) => user.nombreUsuario.toLowerCase() === username.toLowerCase())
+      : false;
+  },
+
   update: async (id: number, usuario: Partial<Usuario>): Promise<Usuario> => {
     const usuarioToSend = {
       ID_Usuario: id,
@@ -25,8 +35,6 @@ export const usuarioService = {
       Estado: usuario.estado,
     };
 
-    console.log(`Actualizando usuario ${id} con datos:`, usuarioToSend);
-
     return fetchWithErrorHandling(`${API_BASE_URL}/usuarios/actualizar/${id}`, {
       method: "PUT",
       body: JSON.stringify(usuarioToSend),
@@ -34,7 +42,6 @@ export const usuarioService = {
   },
 
   delete: async (id: number): Promise<void> => {
-    console.log(`Eliminando usuario con ID: ${id}`);
     return fetchWithErrorHandling(`${API_BASE_URL}/usuarios/eliminar/${id}`, {
       method: "DELETE",
     });

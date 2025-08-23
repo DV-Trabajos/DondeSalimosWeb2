@@ -80,7 +80,7 @@ export function ProfileForm() {
         description: "Tu información se ha guardado correctamente.",
         variant: "default",
       })
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error al actualizar perfil:", error)
 
       const errorMessage = error instanceof Error ? error.message : "Error desconocido"

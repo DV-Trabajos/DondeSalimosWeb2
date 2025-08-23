@@ -37,7 +37,6 @@ export const comercioService = {
   create: async (
     comercio: Omit<Comercio, "iD_Comercio" | "fechaCreacion">
   ): Promise<Comercio> => {
-    console.log("Enviando datos a la API:", comercio);
 
     const comercioToSend = {
       nombre: comercio.nombre,
@@ -71,8 +70,6 @@ export const comercioService = {
       estado: Boolean(comercio.estado),
     };
 
-    console.log(`Actualizando comercio ${id} con datos:`, comercioToSend);
-
     return fetchWithErrorHandling(`${API_BASE_URL}/comercios/actualizar/${id}`, {
       method: "PUT",
       body: JSON.stringify(comercioToSend),
@@ -80,7 +77,6 @@ export const comercioService = {
   },
 
   delete: async (id: number): Promise<void> => {
-    console.log(`Eliminando comercio con ID: ${id}`);
     try {
       const response = await fetchWithErrorHandling(
         `${API_BASE_URL}/comercios/eliminar/${id}`,
@@ -88,7 +84,6 @@ export const comercioService = {
           method: "DELETE",
         }
       );
-      console.log("Respuesta de eliminación:", response);
       return response;
     } catch (error) {
       console.error(`Error al eliminar comercio con ID ${id}:`, error);

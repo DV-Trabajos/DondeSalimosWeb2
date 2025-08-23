@@ -29,8 +29,6 @@ export const rolUsuarioService = {
       iD_RolUsuario: id,
     };
 
-    console.log(`Actualizando rol ${id} con datos:`, rolToSend);
-
     return fetchWithErrorHandling(`${API_BASE_URL}/rolesUsuario/actualizar/${id}`, {
       method: "PUT",
       body: JSON.stringify(rolToSend),
@@ -38,7 +36,6 @@ export const rolUsuarioService = {
   },
 
   delete: async (id: number): Promise<void> => {
-    console.log(`Eliminando rol con ID: ${id}`);
     return fetchWithErrorHandling(`${API_BASE_URL}/rolesUsuario/eliminar/${id}`, {
       method: "DELETE",
     });

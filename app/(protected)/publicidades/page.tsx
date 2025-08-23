@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { PublicidadForm } from "@/components/publicidades/PublicidadForm"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
 import { useToast } from "@/components/ui/use-toast"
-import { type Publicidad, publicidadService } from "../../../services"
+import { type Publicidad, publicidadService } from "@/services"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -58,7 +58,7 @@ export default function PublicidadesPage() {
   const filteredPublicidades = publicidades.filter(
     (publicidad) =>
       publicidad.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      publicidad.comercioNombre?.toLowerCase().includes(searchTerm.toLowerCase() || ""),
+      (publicidad.comercioNombre ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   // Abrir formulario para crear nueva publicidad

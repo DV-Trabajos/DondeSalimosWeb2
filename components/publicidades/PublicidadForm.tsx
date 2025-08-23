@@ -29,7 +29,7 @@ const initialPublicidad: Omit<Publicidad, "iD_Publicidad" | "fechaCreacion"> = {
 }
 
 export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: PublicidadFormProps) {
-  const [publicidad, setPublicidad] = useState<any>(initialPublicidad)
+  const [publicidad, setPublicidad] = useState<Omit<Publicidad, "iD_Publicidad" | "fechaCreacion">>(initialPublicidad)
   const [comercios, setComercios] = useState<Comercio[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
@@ -106,7 +106,6 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    console.log(`Cambiando ${name} a ${value}`)
 
     // Limpiar error al cambiar el valor
     setErrors((prev) => ({ ...prev, [name]: "" }))
@@ -178,8 +177,6 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
         estado: Boolean(publicidad.estado),
         iD_Comercio: Number(publicidad.iD_Comercio),
       }
-
-      console.log("Enviando datos:", publicidadData)
 
       if (isEditing && publicidadId) {
         await publicidadService.update(publicidadId, publicidadData)

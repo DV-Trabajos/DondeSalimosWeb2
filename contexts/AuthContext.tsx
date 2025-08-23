@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Usuario } from "@/services"
+import { useToast } from "@/components/ui/use-toast"
 
 type AuthContextType = {
   user: Usuario | null;
@@ -34,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   // Restaurar sesión desde localStorage
   useEffect(() => {
@@ -44,52 +46,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true);
+    let res: Response;
     try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/iniciarSesionConGoogle`, {
+      res = await fetch(`${API_BASE_URL}/usuarios/iniciarSesionConGoogle`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ idToken }),
       });
       
-      const data = await res.json(); // { usuario, existeUsuario, mensaje }
-
-      if (!res.ok || !data?.existeUsuario) {
-        throw new Error(data?.mensaje || "No fue posible iniciar sesión");
-      }      
-
-      // Guardar usuario
-      setUser(data.usuario ?? null);
-      localStorage.setItem(LS_USER_KEY, JSON.stringify(data.usuario ?? null));
-
-      router.replace("/dashboard");
-    } finally {
+      } catch (err) {
+      toast({ title: "Error", description: "No se pudo conectar con el servidor", variant: "destructive" });
       setIsLoading(false);
+      throw err;
     }
+
+    const data = await res.json(); // { usuario, existeUsuario, mensaje }
+
+    if (!res.ok || !data?.existeUsuario) {
+      setIsLoading(false);
+      throw new Error(data?.mensaje || "No fue posible iniciar sesión");
+    }
+    
+    // Guardar usuario
+    setUser(data.usuario ?? null);
+    localStorage.setItem(LS_USER_KEY, JSON.stringify(data.usuario ?? null));
+
+    router.replace("/dashboard");
+    setIsLoading(false);
   };
 
   const registerWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true);
+    let res: Response;
     try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/registrarseConGoogle`, {
+      res = await fetch(`${API_BASE_URL}/usuarios/registrarseConGoogle`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ idToken }),
       });
-
-      const data = await res.json(); // { usuario, existeUsuario, mensaje }
-
-      if (!res.ok || !data?.existeUsuario) {
-        throw new Error(data?.mensaje || "Usuario existente, debe iniciar sesión");
-      }      
-
-      // Guardar usuario
-      setUser(data.usuario ?? null);
-      localStorage.setItem(LS_USER_KEY, JSON.stringify(data.usuario ?? null));
-
-      router.replace("/dashboard");
-    } finally {
+    } catch (err) {
+      toast({ title: "Error", description: "No se pudo conectar con el servidor", variant: "destructive" });
       setIsLoading(false);
+      throw err;
     }
+
+    const data = await res.json(); // { usuario, existeUsuario, mensaje }
+
+    if (!res.ok || !data?.existeUsuario) {
+      setIsLoading(false);
+      throw new Error(data?.mensaje || "Usuario existente, debe iniciar sesión");
+    }
+
+    // Guardar usuario
+    setUser(data.usuario ?? null);
+    localStorage.setItem(LS_USER_KEY, JSON.stringify(data.usuario ?? null));
+
+    router.replace("/dashboard");
+    setIsLoading(false);
   };
 
   const logout = async () => {

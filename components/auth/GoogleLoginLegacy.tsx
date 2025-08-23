@@ -1,27 +1,23 @@
-import { GoogleLogin } from 'react-google-login';
+import { GoogleLogin, type GoogleLoginResponse } from 'react-google-login';
 
 const GoogleLoginComponent = () => {
-  const handleSuccess = (response: any) => {
-    console.log('Google Login Success:', response);
-    
+  const handleSuccess = (response: GoogleLoginResponse) => {    
+
     // El ID Token está en response.tokenId
     const idToken = response.tokenId;
-    const userInfo = response.profileObj;
-    
-    console.log('ID Token:', idToken);
-    console.log('User Info:', userInfo);
+    //const userInfo = response.profileObj;
     
     // Enviar a tu API
     sendToAPI(idToken);
   };
 
-  const handleFailure = (response: any) => {
-    console.error('Google Login Failed:', response);
+  const handleFailure = (error: Error) => {
+    console.error('Google Login Failed:', error);
   };
 
   const sendToAPI = async (idToken: string) => {
     try {
-      const response = await fetch('https://localhost:7283/api/usuarios/iniciarSesionConGoogle', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/usuarios/iniciarSesionConGoogle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,8 +26,7 @@ const GoogleLoginComponent = () => {
       });
       
       const data = await response.json();
-      console.log('API Response:', data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('API Error:', error);
     }
   };

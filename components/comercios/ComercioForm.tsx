@@ -54,7 +54,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
       comercioService
         .getById(comercioId)
         .then((data) => {
-          console.log("Datos del comercio cargados:", data)
           // Asegurarse de que todos los campos estén correctamente asignados
           setComercio({
             ...data,
@@ -83,12 +82,10 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
   useEffect(() => {
     if (isOpen) {
       setLoadingUsuarios(true)
-      console.log("Cargando usuarios para el selector...")
 
       usuarioService
         .getAll()
         .then((data) => {
-          console.log("Usuarios obtenidos:", data)
           if (Array.isArray(data)) {
             // Filtrar solo usuarios activos
             const usuariosActivos = data.filter((usuario) => usuario.estado)
@@ -135,7 +132,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    console.log(`Cambiando ${name} a ${value}`)
 
     // Limpiar error al cambiar el valor
     setErrors((prev) => ({ ...prev, [name]: "" }))
@@ -146,7 +142,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
 
       // Verificar que sea un número válido
       if (!isNaN(numValue)) {
-        console.log(`Asignando ${name}: ${numValue}`)
         setComercio((prevState) => ({
           ...prevState,
           [name]: numValue,
@@ -247,8 +242,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
       if (isEditing && comercioId) {
         comercioData.iD_Comercio = comercioId
       }
-
-      console.log("Enviando datos:", comercioData)
 
       if (isEditing && comercioId) {
         await comercioService.update(comercioId, comercioData)

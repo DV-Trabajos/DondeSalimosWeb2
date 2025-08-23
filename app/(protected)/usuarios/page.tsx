@@ -52,7 +52,6 @@ export default function UsuariosPage() {
       setUsuarios(usuariosConRol)
       setRoles(rolesData)
     } catch (error) {
-      console.error("Error al cargar datos:", error)
       toast({
         title: "Error",
         description: "No se pudieron cargar los usuarios",
@@ -111,7 +110,6 @@ export default function UsuariosPage() {
 
     setDeleteLoading(true)
     try {
-      console.log(`Intentando eliminar usuario con ID: ${selectedUsuarioId} y UID: ${selectedUsuario.uid}`)
 
       // Primero eliminamos el usuario de la API
       await usuarioService.delete(selectedUsuarioId)
@@ -122,7 +120,6 @@ export default function UsuariosPage() {
       })
       loadData() // Recargar la lista después de eliminar
     } catch (error) {
-      console.error("Error al eliminar usuario:", error)
       toast({
         title: "Error",
         description: "No se pudo eliminar el usuario. " + (error instanceof Error ? error.message : ""),

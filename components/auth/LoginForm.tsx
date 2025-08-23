@@ -7,7 +7,6 @@ import { UserPlus } from "lucide-react";
 import { GoogleLogin, CredentialResponse, } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -23,7 +22,9 @@ export default function LoginForm() {
       await loginWithGoogleIdToken(resp.credential);
 
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message ?? "No se pudo iniciar sesión", variant: "destructive" });
+      if (e?.message !== "No se pudo conectar con el servidor") {
+        toast({ title: "Error", description: e?.message ?? "No se pudo iniciar sesión", variant: "destructive" });
+      }
     }
   
   };

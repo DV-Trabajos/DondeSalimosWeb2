@@ -1,26 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, User, Store, CheckCircle2, ArrowLeft } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { User, Store, ArrowLeft } from "lucide-react"
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContext";
-import type { RolUsuario } from "@/services"
-import { rolUsuarioService } from "@/services"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 
 export default function RegisterForm() {
   const { registerWithGoogleIdToken, isLoading } = useAuth();
   const { toast } = useToast();
-  const [roles, setRoles] = useState<RolUsuario[]>([])
-  const [userType, setUserType] = useState<"usuario" | "comercio">("usuario")
-  const router = useRouter()
 
   const handleGoogleRegister = async (resp: CredentialResponse) => {
 
@@ -29,11 +19,13 @@ export default function RegisterForm() {
       await registerWithGoogleIdToken(resp.credential);
       // Si el usuario ya existe, el contexto redirige a /auth/login con alert
     } catch (e: any) {
-      toast({
-        title: "Error",
-        description: e?.message ?? "No se pudo registrar",
-        variant: "destructive",
-      });
+      if (e?.message !== "No se pudo conectar con el servidor") {
+        toast({
+          title: "Error",
+          description: e?.message ?? "No se pudo registrar",
+          variant: "destructive",
+        });
+      }
     }
   }
 

@@ -1,12 +1,35 @@
 // Tipos para Google Identity Services
+export interface GoogleInitializeConfig {
+  client_id: string
+  callback: (response: GoogleCredentialResponse) => void | Promise<void>
+  auto_select?: boolean
+  cancel_on_tap_outside?: boolean
+  use_fedcm_for_prompt?: boolean
+}
+
+export interface GoogleRenderButtonConfig {
+  theme?: "outline" | "filled_blue" | "filled_black"
+  size?: "large" | "medium" | "small"
+  text?: "signin_with" | "signup_with" | "continue_with" | "signin"
+  shape?: "rectangular" | "pill" | "circle" | "square"
+  width?: string
+}
+
+export interface PromptMomentNotification {
+  isNotDisplayed: () => boolean
+  getNotDisplayedReason: () => string
+  isSkippedMoment: () => boolean
+  getSkippedReason: () => string
+}
+
 declare global {
   interface Window {
     google: {
       accounts: {
         id: {
-          initialize: (config: any) => void
-          prompt: () => void
-          renderButton: (element: HTMLElement, config: any) => void
+          initialize: (config: GoogleInitializeConfig) => void
+          prompt: (cb?: (notification: PromptMomentNotification) => void) => void
+          renderButton: (element: HTMLElement, config: GoogleRenderButtonConfig) => void
           revoke: (email: string, callback: () => void) => void
         }
       }
@@ -28,11 +51,12 @@ export interface GoogleUser {
   family_name?: string
 }
 
+import type { Usuario } from "@/services"
+
 export interface AuthResponse {
-  usuario: any
+  usuario: Usuario | null
   existeUsuario: boolean
   mensaje: string
-  esNuevoUsuario?: boolean
 }
 
 export interface AuthError {
@@ -88,7 +112,7 @@ export const loginWithGoogle = (): Promise<AuthResponse> => {
       client_id: clientId,
       callback: async (response: GoogleCredentialResponse) => {
         try {
-          console.log("🚀 Respuesta de Google recibida")
+          console.log("Respuesta de Google recibida")
 
           // Decodificar el credential para obtener información del usuario
           const userInfo = decodeGoogleCredential(response.credential)
@@ -116,7 +140,7 @@ export const loginWithGoogle = (): Promise<AuthResponse> => {
           const responseText = await apiResponse.text()
 
           if (!apiResponse.ok) {
-            console.error("❌ Error en la respuesta de la API:", responseText)
+            console.error("Error en la respuesta de la API:", responseText)
 
             // Intentar parsear como JSON para obtener el mensaje de error
             try {
@@ -152,16 +176,16 @@ export const loginWithGoogle = (): Promise<AuthResponse> => {
 
           // Procesar la respuesta exitosa del backend
           const data: AuthResponse = JSON.parse(responseText)
-          console.log("✅ Datos recibidos de la API:", data)
+          console.log("Datos recibidos de la API:", data)
 
           resolve(data)
-        } catch (error: any) {
-          console.error("💥 Error al procesar respuesta de Google:", error)
+        } catch (error: unknown) {
+          console.error("Error al procesar respuesta de Google:", error)
 
           const authError: AuthError = {
             type: "NETWORK_ERROR",
             message: "Error de conexión con el servidor. Por favor, inténtalo de nuevo.",
-            originalError: error.message,
+            originalError: error instanceof Error ? error.message : String(error),
           }
 
           reject({ authError })
@@ -169,16 +193,16 @@ export const loginWithGoogle = (): Promise<AuthResponse> => {
       },
       auto_select: false,
       cancel_on_tap_outside: true,
-      // 🔥 CLAVE: Deshabilitar FedCM para evitar conflictos
+      // Deshabilitar FedCM para evitar conflictos
       use_fedcm_for_prompt: false,
     })
 
     // Mostrar el prompt de Google con configuración adicional
-    window.google.accounts.id.prompt((notification: any) => {
+    window.google.accounts.id.prompt((notification: PromptMomentNotification) => {
       console.log("📋 Notificación del prompt:", notification)
 
       if (notification.isNotDisplayed()) {
-        console.log("❌ Google prompt no se mostró")
+        console.log("Google prompt no se mostró")
         const error: AuthError = {
           type: "UNKNOWN",
           message: "No se pudo mostrar el diálogo de Google. Inténtalo de nuevo.",
@@ -217,7 +241,7 @@ export const loadGoogleScript = (): Promise<void> => {
     }
 
     script.onerror = () => {
-      console.error("❌ Error al cargar Google Identity Services")
+      console.error("Error al cargar Google Identity Services")
       reject(new Error("Failed to load Google Identity Services"))
     }
 

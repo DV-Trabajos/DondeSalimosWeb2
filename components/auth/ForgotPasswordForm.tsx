@@ -38,11 +38,11 @@ export function ForgotPasswordForm() {
         title: "Correo enviado",
         description: "Se ha enviado un correo para restablecer tu contraseña",
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error al enviar correo de restablecimiento:", error)
       toast({
         title: "Error",
-        description: error.message || "Error al enviar correo de restablecimiento",
+        description: message,
         variant: "destructive",
       })
     } finally {
