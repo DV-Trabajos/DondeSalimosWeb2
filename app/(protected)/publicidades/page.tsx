@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { PublicidadForm } from "@/components/publicidades/PublicidadForm"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
 import { useToast } from "@/components/ui/use-toast"
-import { type Publicidad, publicidadService } from "../../services"
+import { type Publicidad, publicidadService } from "../../../services"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -28,7 +28,7 @@ export default function PublicidadesPage() {
   const { checkUserPermission } = useAuth()
 
   // Verificar permisos
-  const hasPermission = checkUserPermission("users.manage")
+  const hasPermission = checkUserPermission("publicidades.manage")
 
   // Cargar publicidades
   const loadData = async () => {

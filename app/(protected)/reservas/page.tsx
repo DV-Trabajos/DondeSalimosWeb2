@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { ReservaFormInteractivo } from "@/components/reservas/ReservaFormInteractivo"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
 import { useToast } from "@/components/ui/use-toast"
-import { type Reserva, reservaService } from "../../services"
+import { type Reserva, reservaService } from "../../../services"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -25,10 +25,10 @@ export default function ReservasPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const { toast } = useToast()
-  const { checkUserPermission, currentUser } = useAuth()
+  const { checkUserPermission, user } = useAuth()
 
   // Verificar permisos
-  const hasPermission = checkUserPermission("users.manage")
+  const hasPermission = checkUserPermission("reservas.manage")
 
   // Cargar reservas
   const loadData = async () => {
@@ -209,7 +209,7 @@ export default function ReservasPage() {
           onClose={() => setIsFormOpen(false)}
           onSuccess={loadData}
           reservaId={selectedReservaId}
-          usuarioId={currentUser?.uid ? undefined : undefined} // Aquí podrías pasar el ID del usuario actual si lo necesitas
+          usuarioId={user?.uid ? undefined : undefined} // Aquí podrías pasar el ID del usuario actual si lo necesitas
         />
 
         {/* Diálogo de confirmación para eliminar */}

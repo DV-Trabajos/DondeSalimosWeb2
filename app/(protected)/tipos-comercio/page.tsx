@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { TipoComercioForm } from "@/components/tipos-comercio/TipoComercioForm"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
 import { useToast } from "@/components/ui/use-toast"
-import { type TipoComercio, tipoComercioService } from "../../services"
+import { type TipoComercio, tipoComercioService } from "../../../services"
 
 export default function TiposComercioPage() {
   const [tiposComercio, setTiposComercio] = useState<TipoComercio[]>([])

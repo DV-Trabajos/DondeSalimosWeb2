@@ -6,12 +6,12 @@ import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 
 export default function Home() {
-  const { currentUser, loading } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading) {
-      if (currentUser) {
+    if (!isLoading) {
+      if (user) {
         // Si el usuario está autenticado, redirigir al dashboard
         router.push("/dashboard")
       } else {
@@ -19,7 +19,7 @@ export default function Home() {
         router.push("/landing")
       }
     }
-  }, [currentUser, loading, router])
+  }, [user, isLoading, router])
 
   // Mostrar un indicador de carga mientras se verifica la autenticación
   return (

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { ReseniaForm } from "@/components/resenias/ReseniaForm"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
 import { useToast } from "@/components/ui/use-toast"
-import { type Resenia, reseniaService } from "../../services"
+import { type Resenia, reseniaService } from "../../../services"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -28,7 +28,7 @@ export default function ReseniasPage() {
   const { checkUserPermission } = useAuth()
 
   // Verificar permisos
-  const hasPermission = checkUserPermission("users.manage")
+  const hasPermission = checkUserPermission("resenias.manage")
 
   // Cargar reseñas
   const loadData = async () => {

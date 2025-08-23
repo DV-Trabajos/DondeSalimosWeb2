@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Función para verificar permisos del usuario
-  const checkUserPermission = (_perm: string) => {
+  const checkUserPermission = (perm: string) => {
     if (!user) return false
 
     // Obtener el rol del usuario
@@ -144,6 +144,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         "profile.view", // Mi Perfil
       ],
     }
+
+    return rolePermissions[userRole]?.includes(perm) ?? false
   }
 
   return (

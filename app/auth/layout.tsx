@@ -15,14 +15,14 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const { currentUser } = useAuth()
+  const { user } = useAuth()
 
   // Redirigir al dashboard si el usuario ya está autenticado
   useEffect(() => {
-    if (currentUser) {
+    if (user) {
       router.push("/dashboard")
     }
-  }, [currentUser, router])
+  }, [user, router])
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
