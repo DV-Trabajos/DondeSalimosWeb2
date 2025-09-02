@@ -3,17 +3,20 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Usuario } from "@/services"
-import { useToast } from "@/components/ui/use-toast"
+import { ErrorModal } from "@/components/ui/error-modal"
 
 type AuthContextType = {
   user: Usuario | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  error: string | null
+  showErrorModal: boolean
   loginWithGoogleIdToken: (idToken: string) => Promise<void>;
   registerWithGoogleIdToken: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (patch: Partial<Usuario>) => void;
   checkUserPermission: (perm: string) => boolean;
+  clearError: () => void
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -34,8 +37,9 @@ function safeParse<T>(v: string | null): T | null {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null)
+  const [showErrorModal, setShowErrorModal] = useState(false)
   const router = useRouter();
-  const { toast } = useToast();
 
   // Restaurar sesión desde localStorage
   useEffect(() => {
@@ -46,7 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true);
+    setError(null);
+    setShowErrorModal(false);
+
     let res: Response;
+
     try {
       res = await fetch(`${API_BASE_URL}/usuarios/iniciarSesionConGoogle`, {
         method: "POST",
@@ -55,16 +63,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       } catch (err) {
-      toast({ title: "Error", description: "No se pudo conectar con el servidor", variant: "destructive" });
+      const errorMsg = "No se pudo conectar con el servidor"
+      setError(errorMsg);
+      setShowErrorModal(true);
       setIsLoading(false);
-      throw err;
+
+      return;
     }
 
     const data = await res.json(); // { usuario, existeUsuario, mensaje }
 
-    if (!res.ok || !data?.existeUsuario) {
+    if (!res.ok) { //|| !data?.existeUsuario) {
+      const errorMsg = data?.mensaje || "No fue posible iniciar sesión"
+      setError(errorMsg);
+      setShowErrorModal(true);
       setIsLoading(false);
-      throw new Error(data?.mensaje || "No fue posible iniciar sesión");
+
+      return;
     }
     
     // Guardar usuario
@@ -77,7 +92,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true);
+    setError(null);
+    setShowErrorModal(false);
+
     let res: Response;
+
     try {
       res = await fetch(`${API_BASE_URL}/usuarios/registrarseConGoogle`, {
         method: "POST",
@@ -85,16 +104,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ idToken }),
       });
     } catch (err) {
-      toast({ title: "Error", description: "No se pudo conectar con el servidor", variant: "destructive" });
+      const errorMsg = "No se pudo conectar con el servidor"
+      setError(errorMsg)
+      setShowErrorModal(true);
       setIsLoading(false);
-      throw err;
+      
+      return;
     }
 
     const data = await res.json(); // { usuario, existeUsuario, mensaje }
-
-    if (!res.ok || !data?.existeUsuario) {
+    
+    if (!res.ok) { //|| !data?.existeUsuario) {
+      const errorMsg = data?.mensaje || "No se pudo completar el registro"
+      setError(errorMsg);
+      setShowErrorModal(true);
       setIsLoading(false);
-      throw new Error(data?.mensaje || "Usuario existente, debe iniciar sesión");
+
+      return;
     }
 
     // Guardar usuario
@@ -161,20 +187,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return rolePermissions[userRole]?.includes(perm) ?? false
   }
 
+  const clearError = () => {
+    setError(null)
+    setShowErrorModal(false)
+  }
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
         isLoading,
+        error,
+        showErrorModal,
         loginWithGoogleIdToken,
         registerWithGoogleIdToken,
         logout,
         updateUser,
         checkUserPermission,
+        clearError,
       }}
     >
       {children}
+      <ErrorModal
+        isOpen={showErrorModal}
+        onClose={clearError}
+        title={
+          error?.includes("iniciar sesión") || error?.includes("existe")
+            ? "Error en el inicio de sesión"
+            : "Error en el registro"
+        }
+        message={error || "Ha ocurrido un error"}
+      />
     </AuthContext.Provider>
   );
 };
