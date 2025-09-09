@@ -1,40 +1,39 @@
 "use client"
-
-import { X } from "lucide-react"
-import { Button } from "./button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { AlertTriangle } from "lucide-react"
 
 interface ErrorModalProps {
   isOpen: boolean
   onClose: () => void
-  title?: string
+  title: string
   message: string
 }
 
-export function ErrorModal({ isOpen, onClose, title = "Error", message }: ErrorModalProps) {
-  if (!isOpen) return null
-
+export function ErrorModal({ isOpen, onClose, title, message }: ErrorModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-red-600">{title}</h3>
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-6 w-6 p-0">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <p className="text-gray-700 mb-6">{message}</p>
-
-        <div className="flex justify-end">
-          <Button onClick={onClose} variant="default">
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <AlertDialogTitle className="text-destructive">{title}</AlertDialogTitle>
+          </div>
+          <AlertDialogDescription className="text-left">{message}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={onClose} className="bg-destructive hover:bg-destructive/90">
             Entendido
-          </Button>
-        </div>
-      </div>
-    </div>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

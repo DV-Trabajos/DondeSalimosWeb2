@@ -27,7 +27,7 @@ export interface Comercio {
   nroDocumento: string
   direccion: string
   correo: string
-  telefono: string // Corregido de "telefeno" a "telefono"
+  telefono: string
   estado: boolean
   fechaCreacion: string
   iD_TipoComercio: number

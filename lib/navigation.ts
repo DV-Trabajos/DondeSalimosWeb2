@@ -1,15 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import {
-  LayoutDashboard,
-  Users,
-  Store,
-  Tag,
-  Star,
-  Calendar,
-  Megaphone,
-  Settings,
-  User,
-} from "lucide-react"
+import { LayoutDashboard, Users, Store, Tag, Star, Calendar, Megaphone, Settings, User } from "lucide-react"
 
 export type NavItem = {
   name: string

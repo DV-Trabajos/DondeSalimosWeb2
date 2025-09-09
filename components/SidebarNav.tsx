@@ -1,43 +1,41 @@
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { NavItem } from "@/lib/navigation"
 
 interface SidebarNavProps {
-  items: NavItem[]
-  collapsed: boolean
+  navigation: NavItem[]
   pathname: string
+  collapsed: boolean
 }
 
-export function SidebarNav({ items, collapsed, pathname }: SidebarNavProps) {
+export function SidebarNav({ navigation, pathname, collapsed }: SidebarNavProps) {
   return (
-    <ul role="list" className="-mx-2 space-y-1">
-      {items.map((item) => {
+    <nav className="flex-1 space-y-1 px-4">
+      {navigation.map((item) => {
         const isActive = pathname === item.href
+        const Icon = item.icon
+
         return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              className={cn(
-                "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
-                isActive
-                  ? "bg-brand-pink text-white"
-                  : "text-gray-700 hover:text-brand-pink hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800",
-              )}
-              title={collapsed ? item.name : undefined}
-            >
-              <item.icon
-                className={cn(
-                  "h-6 w-6 shrink-0",
-                  isActive ? "text-white" : "text-gray-400 group-hover:text-brand-pink",
-                )}
-                aria-hidden="true"
-              />
-              {!collapsed && item.name}
+          <Button
+            key={item.name}
+            variant={isActive ? "secondary" : "ghost"}
+            size="sm"
+            className={cn(
+              "w-full justify-start",
+              collapsed ? "px-2" : "px-3",
+              isActive && "bg-secondary text-secondary-foreground",
+            )}
+            asChild
+          >
+            <Link href={item.href}>
+              <Icon className={cn("h-4 w-4", !collapsed && "mr-2")} />
+              {!collapsed && <span>{item.name}</span>}
             </Link>
-          </li>
+          </Button>
         )
       })}
-    </ul>
+    </nav>
   )
 }
 

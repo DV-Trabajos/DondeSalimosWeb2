@@ -28,7 +28,7 @@ export default function ReservasPage() {
   const { checkUserPermission, user } = useAuth()
 
   // Verificar permisos
-  const hasPermission = checkUserPermission("reservas.manage")
+  const hasPermission = checkUserPermission("reservas.view")
 
   // Cargar reservas
   const loadData = async () => {

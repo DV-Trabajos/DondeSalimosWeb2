@@ -1,57 +1,55 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { LogOut, ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { Usuario } from "@/services"
 
 interface SidebarFooterProps {
   user: Usuario | null
-  collapsed: boolean
   onLogout: () => void
+  collapsed: boolean
   toggleCollapsed: () => void
 }
 
-export function SidebarFooter({ user, collapsed, onLogout, toggleCollapsed }: SidebarFooterProps) {
+export function SidebarFooter({ user, onLogout, collapsed, toggleCollapsed }: SidebarFooterProps) {
+  const userInitials = user?.nombreUsuario
+    ? user.nombreUsuario
+        .split(" ")
+        .map((name) => name[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "U"
+
   return (
-    <>
-      <div className="mt-auto">
-        <div className="flex items-center gap-x-4 px-2 py-3 text-sm font-semibold leading-6 text-gray-900 dark:text-white">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={/*user?.photoURL ||*/ ""} alt={user?.nombreUsuario || ""} />
-            <AvatarFallback>{user?.nombreUsuario?.charAt(0) || user?.correo?.charAt(0) || "U"}</AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium">{user?.nombreUsuario || user?.correo || "Usuario"}</p>
-              <p className="truncate text-xs text-gray-500">{user?.rolUsuario?.descripcion || "Usuario"}</p>
-            </div>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          onClick={onLogout}
-          className={cn(
-            "w-full justify-start gap-x-3 px-2 text-gray-700 hover:text-red-600 hover:bg-red-50 dark:text-gray-300 dark:hover:bg-red-900/20",
-            collapsed && "justify-center px-2",
-          )}
-          title={collapsed ? "Cerrar sesión" : undefined}
-        >
-          <LogOut className="h-6 w-6 shrink-0" />
-          {!collapsed && "Cerrar sesión"}
-        </Button>
+    <div className="border-t p-4 space-y-2">
+      {/* User Info */}
+      <div className={cn("flex items-center", collapsed ? "justify-center" : "gap-3")}>
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
+        </Avatar>
+        {!collapsed && (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{user?.nombreUsuario || "Usuario"}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.rolUsuario?.descripcion || "Usuario"}</p>
+          </div>
+        )}
       </div>
-      <div className="flex justify-center p-4 border-t border-gray-200 dark:border-gray-700">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleCollapsed}
-          className="h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-          title={collapsed ? "Expandir menú" : "Colapsar menú"}
-        >
+
+      {/* Actions */}
+      <div className="flex gap-1">
+        <Button variant="ghost" size="sm" onClick={onLogout} className={cn("flex-1", collapsed && "px-2")}>
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span className="ml-2">Salir</span>}
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={toggleCollapsed} className="px-2">
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
-    </>
+    </div>
   )
 }
 

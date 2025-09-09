@@ -28,7 +28,7 @@ export default function ReseniasPage() {
   const { checkUserPermission } = useAuth()
 
   // Verificar permisos
-  const hasPermission = checkUserPermission("resenias.manage")
+  const hasPermission = checkUserPermission("resenias.view")
 
   // Cargar reseñas
   const loadData = async () => {
