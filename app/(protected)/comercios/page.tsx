@@ -176,9 +176,12 @@ export default function ComerciosPage() {
                       <TableHead className="w-16">ID</TableHead>
                       <TableHead className="min-w-[150px]">Nombre</TableHead>
                       <TableHead className="min-w-[120px]">Tipo</TableHead>
+                      <TableHead className="min-w-[120px]">Género Musical</TableHead>
                       <TableHead className="w-20">Cap.</TableHead>
                       <TableHead className="w-20">Mesas</TableHead>
                       <TableHead className="min-w-[150px]">Dirección</TableHead>
+                      <TableHead className="w-20">Hora de Apertura</TableHead>
+                      <TableHead className="w-20">Hora de Cierre</TableHead>
                       <TableHead className="min-w-[120px]">Usuario</TableHead>
                       <TableHead className="w-20">Estado</TableHead>
                       <TableHead className="w-32 text-right">Acciones</TableHead>
@@ -197,11 +200,13 @@ export default function ComerciosPage() {
                           <TableCell className="font-medium">{comercio.iD_Comercio}</TableCell>
                           <TableCell className="font-medium">{comercio.nombre}</TableCell>
                           <TableCell>{comercio.tipoComercioNombre}</TableCell>
+                          <TableCell>{comercio.generoMusical}</TableCell>
                           <TableCell>{comercio.capacidad}</TableCell>
                           <TableCell>{comercio.mesas}</TableCell>
                           <TableCell className="max-w-[200px] truncate" title={comercio.direccion}>
-                            {comercio.direccion}
-                          </TableCell>
+                            {comercio.direccion}</TableCell>
+                          <TableCell>{comercio.horaIngreso}</TableCell>
+                          <TableCell>{comercio.horaCierre}</TableCell>
                           <TableCell>{comercio.usuarioNombre}</TableCell>
                           <TableCell>
                             <Badge variant={comercio.estado ? "success" : "destructive"}>
@@ -300,6 +305,16 @@ export default function ComerciosPage() {
               <div>
                 <label className="text-sm font-medium text-gray-500">Dirección</label>
                 <p className="text-sm">{selectedComercio.direccion}</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">Hora de apertura</label>
+                <p className="text-sm">{selectedComercio.horaIngreso}</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">Hora de cierre</label>
+                <p className="text-sm">{selectedComercio.horaCierre}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

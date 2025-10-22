@@ -9,7 +9,7 @@ import { Loader2, Plus, Pencil, Trash2, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { RolForm } from "@/components/roles/RolForm"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { type RolUsuario, rolUsuarioService } from "../../../services"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
@@ -37,10 +37,31 @@ export default function RolesPage() {
       const data = await rolUsuarioService.getAll()
       setRoles(data)
     } catch (error) {
-      console.error("Error al cargar roles:", error)
+      let errorMessage = "No se pudieron cargar los roles"
+      let errorTitle = "Error al cargar roles"
+
+      if (error instanceof Error) {
+        errorMessage = error.message
+
+        // Personalizar mensajes según el tipo de error
+        const status = (error as any).status
+        if (status === 400) {
+          errorTitle = "No se puede cargar"
+          // El mensaje ya viene de la API
+        } else if (status === 404) {
+          errorTitle = "Roles no encontrados"
+          errorMessage = "No se encontraron roles disponibles"
+        } else if (status === 401 || status === 403) {
+          errorTitle = "Sin permisos"
+          errorMessage = "No tienes permisos para cargar los roles"
+        } else if (status === 500) {
+          errorTitle = "Error del servidor"
+          errorMessage = "Ocurrió un error en el servidor. Por favor, intenta nuevamente"
+        }
+      }
       toast({
-        title: "Error",
-        description: "No se pudieron cargar los roles",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -87,12 +108,34 @@ export default function RolesPage() {
         description: "Rol eliminado correctamente",
       })
       loadData()
+      setIsDeleteDialogOpen(false)
     } catch (error) {
-      console.error("Error al eliminar rol:", error)
+      let errorMessage = "No se pudo eliminar el rol"
+      let errorTitle = "Error al eliminar"
+
+      if (error instanceof Error) {
+        errorMessage = error.message
+
+        // Personalizar mensajes según el tipo de error
+        const status = (error as any).status
+        if (status === 400) {
+          errorTitle = "No se puede eliminar"
+          // El mensaje ya viene de la API, lo usamos directamente
+        } else if (status === 404) {
+          errorTitle = "Rol no encontrado"
+          errorMessage = "El rol que intentas eliminar no existe"
+        } else if (status === 401 || status === 403) {
+          errorTitle = "Sin permisos"
+          errorMessage = "No tienes permisos para eliminar este rol"
+        } else if (status === 500) {
+          errorTitle = "Error del servidor"
+          errorMessage = "Ocurrió un error en el servidor. Por favor, intenta nuevamente"
+        }
+      }
       toast({
-        title: "Error",
-        description: "No se pudo eliminar el rol",
-        variant: "destructive",
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive"
       })
     } finally {
       setDeleteLoading(false)

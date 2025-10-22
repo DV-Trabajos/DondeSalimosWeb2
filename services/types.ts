@@ -26,6 +26,8 @@ export interface Comercio {
   tipoDocumento: string
   nroDocumento: string
   direccion: string
+  horaIngreso: string
+  horaCierre: string
   correo: string
   telefono: string
   estado: boolean

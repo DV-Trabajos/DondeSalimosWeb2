@@ -46,6 +46,8 @@ export const comercioService = {
       tipoDocumento: comercio.tipoDocumento,
       nroDocumento: comercio.nroDocumento,
       direccion: comercio.direccion,
+      horaIngreso: comercio.horaIngreso,
+      horaCierre: comercio.horaCierre,
       correo: comercio.correo,
       telefono: comercio.telefono,
       estado: Boolean(comercio.estado),

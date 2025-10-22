@@ -231,6 +231,8 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
         tipoDocumento: comercio.tipoDocumento,
         nroDocumento: comercio.nroDocumento.trim(),
         direccion: comercio.direccion.trim(),
+        horaIngreso : comercio.horaIngreso,
+        horaCierre : comercio.horaCierre,
         correo: comercio.correo.trim(),
         telefono: comercio.telefono.trim(),
         estado: Boolean(comercio.estado),

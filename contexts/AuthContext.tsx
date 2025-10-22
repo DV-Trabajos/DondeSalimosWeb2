@@ -13,7 +13,7 @@ type AuthContextType = {
   error: string | null
   showErrorModal: boolean
   loginWithGoogleIdToken: (idToken: string) => Promise<void>
-  registerWithGoogleIdToken: (idToken: string) => Promise<void>
+  registerWithGoogleIdToken: (idToken: string, rolUsuario: number) => Promise<void>
   logout: () => Promise<void>
   updateUser: (patch: Partial<Usuario>) => void
   checkUserPermission: (perm: string) => boolean
@@ -37,7 +37,7 @@ function safeParse<T>(v: string | null): T | null {
 
 const getRoleNameById = (roleId: number): string => {
   switch (roleId) {
-    case 1:
+    case 15:
       return "Usuario"
     case 2:
       return "Administrador"
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false)
   }
 
-  const registerWithGoogleIdToken = async (idToken: string) => {
+  const registerWithGoogleIdToken = async (idToken: string, rolUsuario: number) => {
     setIsLoading(true)
     setError(null)
     setShowErrorModal(false)
@@ -151,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       res = await fetch(`${API_BASE_URL}/usuarios/registrarseConGoogle`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ idToken, rolUsuario }),
       })
     } catch (err) {
       const errorMsg = "No se pudo conectar con el servidor"
@@ -236,7 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         "roles.manage", // Roles
         "comercios.manage", // Comercios
         "tipos-comercio.manage", // Tipos de Comercio
-        "resenias.manage", // Reseñas
+        "resenias.view", // Reseñas
         "reservas.manage", // Reservas
         "publicidades.manage", // Publicidades
         "profile.view", // Mi Perfil
