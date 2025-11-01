@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Plus, Pencil, Trash2, Search, Eye } from "lucide-react"
+import { Loader2, Plus, Pencil, Trash2, Search, Eye, AlertCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { ComercioForm } from "@/components/comercios/ComercioForm"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   type Comercio,
   type TipoComercio,
@@ -19,6 +20,7 @@ import {
   tipoComercioService,
   usuarioService,
 } from "@/services"
+import { extractErrorMessage, mapApiError, getErrorIcon, getErrorVariant } from "@/utils/errorUtils"
 
 export default function ComerciosPage() {
   const [comercios, setComercios] = useState<Comercio[]>([])
@@ -32,11 +34,14 @@ export default function ComerciosPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [selectedComercio, setSelectedComercio] = useState<Comercio | null>(null)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Cargar comercios, tipos de comercio y usuarios
   const loadData = async () => {
     setLoading(true)
+    setError(null)
+    
     try {
       const [comerciosData, tiposComercioData, usuariosData] = await Promise.all([
         comercioService.getAll(),
@@ -60,10 +65,16 @@ export default function ComerciosPage() {
       setUsuarios(usuariosData)
     } catch (error) {
       console.error("Error al cargar datos:", error)
+      
+      const errorMessage = extractErrorMessage(error)
+      const mappedError = mapApiError(errorMessage)
+      
+      setError(mappedError.message)
+      
       toast({
-        title: "Error",
-        description: "No se pudieron cargar los comercios",
-        variant: "destructive",
+        title: `${getErrorIcon(mappedError.type)} Error al cargar comercios`,
+        description: mappedError.message,
+        variant: getErrorVariant(mappedError.type),
       })
     } finally {
       setLoading(false)
@@ -111,7 +122,7 @@ export default function ComerciosPage() {
     if (!selectedComercioId) {
       console.error("No hay ID de comercio seleccionado para eliminar")
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: "No se pudo identificar el comercio a eliminar",
         variant: "destructive",
       })
@@ -119,24 +130,56 @@ export default function ComerciosPage() {
     }
 
     setDeleteLoading(true)
+    
     try {
       await comercioService.delete(selectedComercioId)
+      
       toast({
-        title: "Éxito",
-        description: "Comercio eliminado correctamente",
+        title: "✅ ¡Comercio eliminado!",
+        description: "El comercio se eliminó correctamente",
       })
+      
       await loadData()
     } catch (error) {
       console.error("Error al eliminar comercio:", error)
+      
+      const errorMessage = extractErrorMessage(error)
+      const mappedError = mapApiError(errorMessage)
+      
       toast({
-        title: "Error",
-        description: "No se pudo eliminar el comercio. Por favor, intenta nuevamente.",
-        variant: "destructive",
+        title: `${getErrorIcon(mappedError.type)} Error al eliminar`,
+        description: mappedError.message,
+        variant: getErrorVariant(mappedError.type),
       })
     } finally {
       setDeleteLoading(false)
       setIsDeleteDialogOpen(false)
     }
+  }
+
+  // Componente de alerta de error
+  const ErrorAlert = () => {
+    if (!error) return null
+    
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error al cargar comercios</AlertTitle>
+        <AlertDescription className="flex items-center justify-between">
+          <span>{error}</span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              setError(null)
+              loadData()
+            }}
+          >
+            Reintentar
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
   }
 
   return (
@@ -150,6 +193,8 @@ export default function ComerciosPage() {
           </Button>
         </CardHeader>
         <CardContent>
+          <ErrorAlert />
+          
           <div className="mb-4">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -190,8 +235,8 @@ export default function ComerciosPage() {
                   <TableBody>
                     {filteredComercios.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                          No se encontraron comercios
+                        <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                          {searchTerm ? "No se encontraron comercios que coincidan con tu búsqueda" : "No hay comercios registrados"}
                         </TableCell>
                       </TableRow>
                     ) : (

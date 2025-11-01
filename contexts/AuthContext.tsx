@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import type { Usuario } from "@/services"
 import { ErrorModal } from "@/components/ui/error-modal"
+import { validateUserSession } from "@/services/api"
 
 type AuthContextType = {
   user: Usuario | null
@@ -27,6 +28,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:
 const LS_USER_KEY = "APP_USER"
 const LS_TOKEN_KEY = "APP_TOKEN"
 
+// Intervalo de validación: cada 5 minutos
+//const VALIDATION_INTERVAL = 5 * 60 * 1000
+
 function safeParse<T>(v: string | null): T | null {
   try {
     return v ? (JSON.parse(v) as T) : null
@@ -37,14 +41,14 @@ function safeParse<T>(v: string | null): T | null {
 
 const getRoleNameById = (roleId: number): string => {
   switch (roleId) {
-    case 15:
+    case 16:
       return "Usuario"
     case 2:
       return "Administrador"
     case 3:
       return "Comercio"
     default:
-      return "Usuario" // Rol predeterminado
+      return "Usuario"
   }
 }
 
@@ -55,12 +59,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [showErrorModal, setShowErrorModal] = useState(false)
   const router = useRouter()
 
-  // Restaurar sesión desde localStorage
+  // Función para validar la sesión actual
+  const checkSession = useCallback(async () => {
+    const storedUser = safeParse<Usuario>(typeof window !== "undefined" ? localStorage.getItem(LS_USER_KEY) : null)
+    
+    if (!storedUser) {
+      return
+    }
+    
+    try {
+      const isValid = await validateUserSession(storedUser.iD_Usuario)
+      
+      if (!isValid) {
+        setUser(null)
+        localStorage.removeItem(LS_USER_KEY)
+        localStorage.removeItem(LS_TOKEN_KEY)
+        router.push("/auth/login")
+      } else {
+        console.log("Sesión válida")
+      }
+    } catch (error) {
+      console.error("Error al validar sesión:", error)
+    }
+  }, [router])
+
+  // Restaurar sesión desde localStorage al montar
   useEffect(() => {
     const storedUser = safeParse<Usuario>(typeof window !== "undefined" ? localStorage.getItem(LS_USER_KEY) : null)
     setUser(storedUser)
     setIsLoading(false)
-  }, [])
+    
+    // Validar inmediatamente si hay usuario
+    if (storedUser) {
+      checkSession()
+    }
+  }, [checkSession])
+
+  // Validación periódica cada 5 minutos
+  /*useEffect(() => {
+    if (!user) return
+
+    const interval = setInterval(() => {
+      console.log("Validación periódica de sesión...")
+      checkSession()
+    }, VALIDATION_INTERVAL)
+
+    return () => clearInterval(interval)
+  }, [user, checkSession])
+  */
+
+  // Validar cuando la ventana vuelve a tener foco
+  useEffect(() => {
+    if (!user) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkSession()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [user, checkSession])
 
   const fetchUserWithRole = async (userId: number): Promise<Usuario | null> => {
     try {
@@ -101,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return
     }
 
-    const data = await res.json() // { usuario, existeUsuario, mensaje }
+    const data = await res.json()
 
     if (!res.ok) {
       const errorMsg = data?.mensaje || "No fue posible iniciar sesión"
@@ -114,7 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const userWithRole = data.usuario
     if (userWithRole && userWithRole.iD_RolUsuario) {
-      // Si no tiene rolUsuario completo, crearlo basado en el ID
       if (!userWithRole.rolUsuario) {
         userWithRole.rolUsuario = {
           iD_RolUsuario: userWithRole.iD_RolUsuario,
@@ -123,16 +185,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fechaCreacion: new Date().toISOString(),
         }
       }
-
-      console.log(
-        "[v0] Usuario logueado con rol:",
-        userWithRole.rolUsuario.descripcion,
-        "ID:",
-        userWithRole.iD_RolUsuario,
-      )
     }
 
-    // Guardar usuario
     setUser(userWithRole ?? null)
     localStorage.setItem(LS_USER_KEY, JSON.stringify(userWithRole ?? null))
 
@@ -162,7 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return
     }
 
-    const data = await res.json() // { usuario, existeUsuario, mensaje }
+    const data = await res.json()
 
     if (!res.ok) {
       const errorMsg = data?.mensaje || "No se pudo completar el registro"
@@ -175,26 +229,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const userWithRole = data.usuario
     if (userWithRole) {
-      console.log("[v0] Usuario registrado con ID_RolUsuario:", userWithRole.iD_RolUsuario)
 
-      // Asegurar que tenga el rol predeterminado (Usuario = 1) si no se especifica
       if (!userWithRole.iD_RolUsuario) {
-        userWithRole.iD_RolUsuario = 1 // Rol predeterminado: Usuario
+        userWithRole.iD_RolUsuario = 1
       }
 
-      // Crear el objeto rolUsuario basado en el ID
       userWithRole.rolUsuario = {
         iD_RolUsuario: userWithRole.iD_RolUsuario,
         descripcion: getRoleNameById(userWithRole.iD_RolUsuario),
         estado: true,
         fechaCreacion: new Date().toISOString(),
       }
-
-      console.log("[v0] Rol asignado después del registro:", userWithRole.rolUsuario.descripcion)
-      console.log("[v0] Usuario completo:", userWithRole)
     }
 
-    // Guardar usuario
     setUser(userWithRole ?? null)
     localStorage.setItem(LS_USER_KEY, JSON.stringify(userWithRole ?? null))
 
@@ -203,8 +250,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const logout = async () => {
-    // Si tu API tiene endpoint de logout futuro, podrías llamarlo acá.
-    // Por ahora sólo limpiamos front.
     localStorage.removeItem(LS_USER_KEY)
     localStorage.removeItem(LS_TOKEN_KEY)
     setUser(null)
@@ -219,46 +264,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })
   }
 
-  // Función para verificar permisos del usuario
   const checkUserPermission = (perm: string) => {
     if (!user) return false
 
     const userRoleId = user.iD_RolUsuario || user.rolUsuario?.iD_RolUsuario
     const userRole = getRoleNameById(userRoleId || 1)
 
-    console.log("[v0] Verificando permiso:", perm, "para rol:", userRole, "ID:", userRoleId)
-
-    // Mapeo de permisos basado en roles específicos
     const rolePermissions: Record<string, string[]> = {
-      // ADMINISTRADOR: Ve todas las pestañas
       Administrador: [
-        "users.manage", // Usuarios
-        "roles.manage", // Roles
-        "comercios.manage", // Comercios
-        "tipos-comercio.manage", // Tipos de Comercio
-        "resenias.view", // Reseñas
-        "reservas.manage", // Reservas
-        "publicidades.manage", // Publicidades
-        "profile.view", // Mi Perfil
+        "users.manage",
+        "roles.manage",
+        "comercios.manage",
+        "tipos-comercio.manage",
+        "resenias.manage",
+        "reservas.manage",
+        "publicidades.manage",
+        "profile.view",
       ],
 
-      // COMERCIO: Ve reservas, publicidades y mi perfil
       Comercio: [
-        "reservas.view", // Reservas
-        "publicidades.view", // Publicidades
-        "profile.view", // Mi Perfil
+        "comercios.view",
+        "reservas.view",
+        "publicidades.view",
+        "profile.view",
       ],
 
-      // USUARIO: Ve reservas, reseñas y mi perfil
       Usuario: [
-        "reservas.view", // Reservas
-        "resenias.view", // Reseñas
-        "profile.view", // Mi Perfil
+        "reservas.view",
+        "resenias.view",
+        "profile.view",
       ],
     }
 
     const hasPermission = rolePermissions[userRole]?.includes(perm) ?? false
-    console.log("[v0] Permiso", perm, "para rol", userRole, ":", hasPermission)
+    console.log("Permiso", perm, "para rol", userRole, ":", hasPermission)
 
     return hasPermission
   }

@@ -7,7 +7,7 @@ export interface ApiError {
 
 // Mapeo de errores específicos a mensajes amigables
 const ERROR_MESSAGES: Record<string, ApiError> = {
-  // Errores de duplicados
+  // Errores de duplicados - USUARIOS
   "El nombre de usuario ya está en uso": {
     message: "Este nombre de usuario ya está registrado. Por favor, elige otro.",
     type: "duplicate",
@@ -18,13 +18,57 @@ const ERROR_MESSAGES: Record<string, ApiError> = {
     type: "duplicate",
     field: "correo",
   },
+  
+  // Errores de duplicados - COMERCIOS
   "El nombre del comercio ya existe": {
     message: "Ya existe un comercio con este nombre. Por favor, elige otro.",
     type: "duplicate",
     field: "nombre",
   },
+  "El correo del comercio ya está registrado": {
+    message: "Ya existe un comercio con este correo electrónico.",
+    type: "duplicate",
+    field: "correo",
+  },
+  "El número de documento ya está registrado": {
+    message: "Ya existe un comercio con este número de documento.",
+    type: "duplicate",
+    field: "nroDocumento",
+  },
+  "El teléfono del comercio ya está registrado": {
+    message: "Ya existe un comercio con este número de teléfono.",
+    type: "duplicate",
+    field: "telefono",
+  },
 
-  // Errores de validación
+  // Errores de validación - COMERCIOS
+  "El nombre del comercio es obligatorio": {
+    message: "Debes ingresar un nombre para el comercio.",
+    type: "validation",
+    field: "nombre",
+  },
+  "La dirección es obligatoria": {
+    message: "Debes ingresar una dirección para el comercio.",
+    type: "validation",
+    field: "direccion",
+  },
+  "Debes seleccionar un tipo de comercio": {
+    message: "Por favor, selecciona un tipo de comercio.",
+    type: "validation",
+    field: "iD_TipoComercio",
+  },
+  "Debes seleccionar un usuario responsable": {
+    message: "Por favor, asigna un usuario responsable para el comercio.",
+    type: "validation",
+    field: "iD_Usuario",
+  },
+  "La capacidad debe ser mayor a 0": {
+    message: "La capacidad del comercio debe ser al menos 1 persona.",
+    type: "validation",
+    field: "capacidad",
+  },
+
+  // Errores de validación generales
   "The Uid field is required": {
     message: "Error de autenticación. Por favor, inicia sesión nuevamente.",
     type: "auth",
@@ -49,6 +93,10 @@ const ERROR_MESSAGES: Record<string, ApiError> = {
     message: "Error de conexión. Por favor, inténtalo de nuevo.",
     type: "network",
   },
+  "NetworkError": {
+    message: "Error de red. Verifica tu conexión a internet.",
+    type: "network",
+  },
 
   // Errores del servidor
   "Internal Server Error": {
@@ -59,14 +107,26 @@ const ERROR_MESSAGES: Record<string, ApiError> = {
     message: "El servicio no está disponible temporalmente.",
     type: "server",
   },
+  "500": {
+    message: "Error del servidor. Por favor, inténtalo más tarde.",
+    type: "server",
+  },
 
   // Errores de autorización
-  Unauthorized: {
+  "Unauthorized": {
     message: "No tienes permisos para realizar esta acción.",
     type: "auth",
   },
-  Forbidden: {
+  "Forbidden": {
     message: "Acceso denegado.",
+    type: "auth",
+  },
+  "401": {
+    message: "Sesión expirada. Por favor, inicia sesión nuevamente.",
+    type: "auth",
+  },
+  "403": {
+    message: "No tienes permisos para realizar esta acción.",
     type: "auth",
   },
 
@@ -79,27 +139,45 @@ const ERROR_MESSAGES: Record<string, ApiError> = {
     message: "El comercio solicitado no existe.",
     type: "validation",
   },
+  "404": {
+    message: "No se encontró el recurso solicitado.",
+    type: "validation",
+  },
+
+  // Errores de relación
+  "No se puede eliminar el comercio porque tiene reservas asociadas": {
+    message: "Este comercio tiene reservas activas y no puede ser eliminado.",
+    type: "validation",
+  },
+  "No se puede eliminar el comercio porque tiene reseñas asociadas": {
+    message: "Este comercio tiene reseñas y no puede ser eliminado.",
+    type: "validation",
+  },
 }
 
 // Función para mapear errores de la API a mensajes amigables
 export function mapApiError(errorMessage: string): ApiError {
+  // Limpiar el mensaje de error
+  const cleanMessage = errorMessage.trim()
+
   // Buscar coincidencia exacta
-  if (ERROR_MESSAGES[errorMessage]) {
-    return ERROR_MESSAGES[errorMessage]
+  if (ERROR_MESSAGES[cleanMessage]) {
+    return ERROR_MESSAGES[cleanMessage]
   }
 
   // Buscar coincidencias parciales para errores dinámicos
   for (const [key, value] of Object.entries(ERROR_MESSAGES)) {
-    if (errorMessage.includes(key) || key.includes(errorMessage)) {
+    if (cleanMessage.includes(key) || key.includes(cleanMessage)) {
       return value
     }
   }
 
   // Detectar patrones comunes
   if (
-    errorMessage.toLowerCase().includes("ya existe") ||
-    errorMessage.toLowerCase().includes("already exists") ||
-    errorMessage.toLowerCase().includes("ya está en uso")
+    cleanMessage.toLowerCase().includes("ya existe") ||
+    cleanMessage.toLowerCase().includes("already exists") ||
+    cleanMessage.toLowerCase().includes("ya está en uso") ||
+    cleanMessage.toLowerCase().includes("duplicado")
   ) {
     return {
       message: "Este valor ya está en uso. Por favor, elige otro.",
@@ -108,9 +186,10 @@ export function mapApiError(errorMessage: string): ApiError {
   }
 
   if (
-    errorMessage.toLowerCase().includes("requerido") ||
-    errorMessage.toLowerCase().includes("required") ||
-    errorMessage.toLowerCase().includes("obligatorio")
+    cleanMessage.toLowerCase().includes("requerido") ||
+    cleanMessage.toLowerCase().includes("required") ||
+    cleanMessage.toLowerCase().includes("obligatorio") ||
+    cleanMessage.toLowerCase().includes("is required")
   ) {
     return {
       message: "Por favor, completa todos los campos obligatorios.",
@@ -118,16 +197,39 @@ export function mapApiError(errorMessage: string): ApiError {
     }
   }
 
-  if (errorMessage.toLowerCase().includes("timeout") || errorMessage.toLowerCase().includes("tiempo")) {
+  if (
+    cleanMessage.toLowerCase().includes("timeout") || 
+    cleanMessage.toLowerCase().includes("tiempo") ||
+    cleanMessage.toLowerCase().includes("timed out")
+  ) {
     return {
       message: "La operación tardó demasiado. Por favor, inténtalo de nuevo.",
       type: "network",
     }
   }
 
+  if (
+    cleanMessage.toLowerCase().includes("no se puede eliminar") ||
+    cleanMessage.toLowerCase().includes("cannot delete") ||
+    cleanMessage.toLowerCase().includes("asociad")
+  ) {
+    return {
+      message: "No se puede eliminar porque tiene información relacionada.",
+      type: "validation",
+    }
+  }
+
+  // Detectar códigos de error HTTP
+  if (/^[45]\d{2}$/.test(cleanMessage)) {
+    const code = cleanMessage
+    if (ERROR_MESSAGES[code]) {
+      return ERROR_MESSAGES[code]
+    }
+  }
+
   // Error genérico
   return {
-    message: errorMessage || "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.",
+    message: cleanMessage || "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.",
     type: "unknown",
   }
 }
@@ -159,4 +261,23 @@ export function getErrorVariant(type: ApiError["type"]): "destructive" | "defaul
     default:
       return "destructive"
   }
+}
+
+// Función auxiliar para extraer mensaje de error de diferentes formatos
+export function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+  
+  if (typeof error === "string") {
+    return error
+  }
+  
+  if (typeof error === "object" && error !== null) {
+    // Intentar extraer el mensaje de diferentes estructuras
+    const err = error as any
+    return err.message || err.error || err.mensaje || err.Mensaje || "Error desconocido"
+  }
+  
+  return "Error desconocido"
 }

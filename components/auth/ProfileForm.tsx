@@ -76,7 +76,7 @@ export function ProfileForm() {
 
       // Mostrar mensaje de éxito
       toast({
-        title: "✅ Perfil actualizado",
+        title: "Perfil actualizado",
         description: "Tu información se ha guardado correctamente.",
         variant: "default",
       })

@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Loader2, AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { type Comercio, type TipoComercio, type Usuario, comercioService, usuarioService } from "../../services"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -26,15 +25,21 @@ const initialComercio: Omit<Comercio, "iD_Comercio" | "fechaCreacion"> = {
   capacidad: 0,
   mesas: 0,
   generoMusical: "",
-  tipoDocumento: "DNI",
+  tipoDocumento: "DNI", // Valor por defecto explícito
   nroDocumento: "",
   direccion: "",
+  horaIngreso: "",
+  horaCierre: "",
   correo: "",
   telefono: "",
   estado: true,
-  iD_TipoComercio: 0, // Cambiado a 0 para forzar selección
-  iD_Usuario: 0, // Cambiado a 0 para forzar selección
+  iD_TipoComercio: 0,
+  iD_Usuario: 0,
 }
+
+// Tipos de documento válidos
+const TIPOS_DOCUMENTO = ["DNI", "CUIT", "CUIL"] as const
+type TipoDocumento = typeof TIPOS_DOCUMENTO[number]
 
 export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposComercio = [] }: ComercioFormProps) {
   const [comercio, setComercio] = useState<any>(initialComercio)
@@ -46,6 +51,13 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
   const { toast } = useToast()
   const isEditing = !!comercioId
 
+  // Función helper para normalizar el tipo de documento
+  const normalizeTipoDocumento = (tipo: string | null | undefined): TipoDocumento => {
+    if (!tipo) return "DNI"
+    const tipoUpper = tipo.toUpperCase().trim()
+    return TIPOS_DOCUMENTO.includes(tipoUpper as TipoDocumento) ? (tipoUpper as TipoDocumento) : "DNI"
+  }
+
   // Cargar datos del comercio si estamos editando
   useEffect(() => {
     if (isOpen && isEditing && comercioId) {
@@ -54,10 +66,22 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
       comercioService
         .getById(comercioId)
         .then((data) => {
+          console.log("Datos del comercio recibidos:", data)
+          console.log("Tipo de documento original:", data.tipoDocumento)
+          
+          // Normalizar el tipo de documento
+          const tipoDocumentoNormalizado = normalizeTipoDocumento(data.tipoDocumento)
+          console.log("Tipo de documento normalizado:", tipoDocumentoNormalizado)
+          
           // Asegurarse de que todos los campos estén correctamente asignados
           setComercio({
             ...data,
-            tipoDocumento: data.tipoDocumento || "DNI", // Asegurarse de que tipoDocumento tenga un valor
+            tipoDocumento: tipoDocumentoNormalizado,
+            // Asegurar que los valores numéricos sean números
+            capacidad: Number(data.capacidad) || 0,
+            mesas: Number(data.mesas) || 0,
+            iD_TipoComercio: Number(data.iD_TipoComercio) || 0,
+            iD_Usuario: Number(data.iD_Usuario) || 0,
           })
           setLoadingData(false)
         })
@@ -72,13 +96,14 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
           setLoadingData(false)
         })
     } else if (isOpen && !isEditing) {
-      // Asegurarse de que se reinicie el formulario con valores iniciales
+      // Reiniciar el formulario con valores iniciales
+      console.log("Reiniciando formulario con valores por defecto")
       setComercio({ ...initialComercio })
       setErrors({})
     }
   }, [isOpen, comercioId, isEditing, onClose, toast])
 
-  // Cargar usuarios para el selector - separado del efecto anterior para mejor manejo
+  // Cargar usuarios para el selector
   useEffect(() => {
     if (isOpen) {
       setLoadingUsuarios(true)
@@ -87,7 +112,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
         .getAll()
         .then((data) => {
           if (Array.isArray(data)) {
-            // Filtrar solo usuarios activos
             const usuariosActivos = data.filter((usuario) => usuario.estado)
             setUsuarios(usuariosActivos)
           } else {
@@ -110,13 +134,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
     }
   }, [isOpen, toast])
 
-  // Depuración para verificar los tipos de comercio disponibles
-  useEffect(() => {
-    if (tiposComercio.length > 0) {
-      console.log("Tipos de comercio disponibles:", tiposComercio)
-    }
-  }, [tiposComercio])
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target
 
@@ -132,23 +149,27 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
   }
 
   const handleSelectChange = (name: string, value: string) => {
+    console.log(`Cambiando ${name} a ${value}`)
 
     // Limpiar error al cambiar el valor
     setErrors((prev) => ({ ...prev, [name]: "" }))
 
     if (name === "iD_TipoComercio" || name === "iD_Usuario") {
-      // Convertir el valor a número entero
       const numValue = Number.parseInt(value, 10)
-
-      // Verificar que sea un número válido
       if (!isNaN(numValue)) {
         setComercio((prevState) => ({
           ...prevState,
           [name]: numValue,
         }))
-      } else {
-        console.error(`Error al convertir valor para ${name}: ${value}`)
       }
+    } else if (name === "tipoDocumento") {
+      // Para tipo de documento, guardamos el string directamente
+      const tipoNormalizado = normalizeTipoDocumento(value)
+      console.log(`Tipo de documento seleccionado: ${tipoNormalizado}`)
+      setComercio((prevComercio) => ({
+        ...prevComercio,
+        tipoDocumento: tipoNormalizado,
+      }))
     } else {
       setComercio((prevComercio) => ({
         ...prevComercio,
@@ -209,7 +230,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validar formulario
     if (!validateForm()) {
       toast({
         title: "Error",
@@ -222,17 +242,16 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
     setLoading(true)
 
     try {
-      // Crear objeto con los campos necesarios
       const comercioData = {
         nombre: comercio.nombre.trim(),
         capacidad: Number(comercio.capacidad),
         mesas: Number(comercio.mesas),
         generoMusical: comercio.generoMusical?.trim() || "",
-        tipoDocumento: comercio.tipoDocumento,
+        tipoDocumento: comercio.tipoDocumento, // Ya está normalizado
         nroDocumento: comercio.nroDocumento.trim(),
         direccion: comercio.direccion.trim(),
-        horaIngreso : comercio.horaIngreso,
-        horaCierre : comercio.horaCierre,
+        horaIngreso: comercio.horaIngreso,
+        horaCierre: comercio.horaCierre,
         correo: comercio.correo.trim(),
         telefono: comercio.telefono.trim(),
         estado: Boolean(comercio.estado),
@@ -240,10 +259,7 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
         iD_Usuario: Number(comercio.iD_Usuario),
       }
 
-      // Si estamos editando, incluir el ID del comercio
-      if (isEditing && comercioId) {
-        comercioData.iD_Comercio = comercioId
-      }
+      console.log("Datos a enviar:", comercioData)
 
       if (isEditing && comercioId) {
         await comercioService.update(comercioId, comercioData)
@@ -330,12 +346,8 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
                         })
                       ) : (
                         <>
-                          <SelectItem key="tipo-1" value="1">
-                            Bar
-                          </SelectItem>
-                          <SelectItem key="tipo-2" value="2">
-                            Boliche
-                          </SelectItem>
+                          <SelectItem key="tipo-1" value="1">Bar</SelectItem>
+                          <SelectItem key="tipo-2" value="2">Boliche</SelectItem>
                         </>
                       )}
                     </SelectContent>
@@ -405,6 +417,12 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
                       <SelectItem value="CUIL">CUIL</SelectItem>
                     </SelectContent>
                   </Select>
+                  {/* Mostrar el valor actual en modo debug */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <p className="text-xs text-muted-foreground">
+                      Valor actual: {comercio.tipoDocumento || 'ninguno'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -498,14 +516,6 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
                   </SelectContent>
                 </Select>
                 {errors.iD_Usuario && <p className="text-sm text-destructive">{errors.iD_Usuario}</p>}
-                {usuarios.length === 0 && !loadingUsuarios && (
-                  <Alert variant="warning" className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      No se encontraron usuarios activos. Por favor, crea usuarios primero.
-                    </AlertDescription>
-                  </Alert>
-                )}
               </div>
 
               <div className="flex items-center space-x-2">

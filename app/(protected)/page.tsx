@@ -83,7 +83,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalComercios}</div>
-                  <p className="text-xs text-muted-foreground">{stats.comerciosActivos} activos</p>
+                  <p className="text-xs text-muted-foreground">{stats.comerciosActivos} Activos</p>
                 </CardContent>
               </Card>
 

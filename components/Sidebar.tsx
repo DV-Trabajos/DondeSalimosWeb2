@@ -14,12 +14,12 @@ const SIDEBAR_STATE_KEY = "donde-salimos-sidebar-collapsed"
 
 const getRoleNameById = (roleId: number): string => {
   switch (roleId) {
-    case 1:
-      return "Usuario"
     case 2:
       return "Administrador"
     case 3:
       return "Comercio"
+    case 16:
+      return "Usuario"
     default:
       return "Usuario"
   }
@@ -55,18 +55,7 @@ export function Sidebar() {
 
   const userRoleId = user?.iD_RolUsuario || user?.rolUsuario?.iD_RolUsuario
   const userRole = userRoleId ? getRoleNameById(userRoleId) : user?.rolUsuario?.descripcion || "Usuario"
-
-  console.log("[v0] Usuario actual:", user)
-  console.log("[v0] ID del rol:", userRoleId)
-  console.log("[v0] Nombre del rol:", userRole)
-
   const navigation = getNavigationForRole(userRole)
-  console.log(
-    "[v0] Navegación filtrada para rol",
-    userRole,
-    ":",
-    navigation.map((n) => n.name),
-  )
 
   const toggleCollapsed = () => setCollapsed(!collapsed)
 

@@ -12,7 +12,7 @@ export const navigationConfig: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Usuarios", href: "/usuarios", icon: Users, roles: ["Administrador"] },
   { name: "Roles", href: "/roles", icon: Settings, roles: ["Administrador"] },
-  { name: "Comercios", href: "/comercios", icon: Store, roles: ["Administrador"] },
+  { name: "Comercios", href: "/comercios", icon: Store, roles: ["Administrador", "Comercio"] },
   { name: "Tipos de Comercio", href: "/tipos-comercio", icon: Tag, roles: ["Administrador"] },
   { name: "Reseñas", href: "/resenias", icon: Star, roles: ["Administrador", "Usuario"] },
   { name: "Reservas", href: "/reservas", icon: Calendar, roles: ["Administrador", "Comercio", "Usuario"] },

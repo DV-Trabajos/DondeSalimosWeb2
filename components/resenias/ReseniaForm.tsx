@@ -57,7 +57,6 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
           setLoadingData(false)
         })
         .catch((error) => {
-          console.error("Error al cargar reseña:", error)
           toast({
             title: "Error",
             description: "No se pudo cargar la información de la reseña",
@@ -86,7 +85,6 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
           setUsuarios(usuariosData.filter((usuario) => usuario.estado))
         })
         .catch((error) => {
-          console.error("Error al cargar datos:", error)
           toast({
             title: "Error",
             description: "No se pudieron cargar los datos necesarios",
@@ -107,7 +105,6 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    console.log(`Cambiando ${name} a ${value}`)
     setErrors({ ...errors, [name]: "" })
 
     // Convertir el valor a número entero
@@ -115,13 +112,10 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
 
     // Verificar que sea un número válido
     if (!isNaN(numValue)) {
-      console.log(`Asignando ${name}: ${numValue}`)
       setResenia((prevState) => ({
         ...prevState,
         [name]: numValue,
       }))
-    } else {
-      console.error(`Error al convertir valor para ${name}: ${value}`)
     }
   }
 
@@ -165,9 +159,7 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
         comentario: resenia.comentario.trim(),
         estado: Boolean(resenia.estado),
       }
-
-      console.log("Enviando datos:", reseniaData)
-
+      
       if (isEditing && reseniaId) {
         await reseniaService.update(reseniaId, reseniaData)
         toast({
@@ -184,7 +176,6 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
       onSuccess()
       onClose()
     } catch (error) {
-      console.error("Error al guardar reseña:", error)
       toast({
         title: "Error",
         description: `No se pudo ${isEditing ? "actualizar" : "crear"} la reseña. ${
