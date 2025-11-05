@@ -28,9 +28,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:
 const LS_USER_KEY = "APP_USER"
 const LS_TOKEN_KEY = "APP_TOKEN"
 
-// Intervalo de validación: cada 5 minutos
-//const VALIDATION_INTERVAL = 5 * 60 * 1000
-
 function safeParse<T>(v: string | null): T | null {
   try {
     return v ? (JSON.parse(v) as T) : null
@@ -95,19 +92,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [checkSession])
 
-  // Validación periódica cada 5 minutos
-  /*useEffect(() => {
-    if (!user) return
-
-    const interval = setInterval(() => {
-      console.log("Validación periódica de sesión...")
-      checkSession()
-    }, VALIDATION_INTERVAL)
-
-    return () => clearInterval(interval)
-  }, [user, checkSession])
-  */
-
   // Validar cuando la ventana vuelve a tener foco
   useEffect(() => {
     if (!user) return
@@ -124,23 +108,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [user, checkSession])
-
-  const fetchUserWithRole = async (userId: number): Promise<Usuario | null> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/usuarios/${userId}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-      })
-
-      if (response.ok) {
-        const userData = await response.json()
-        return userData
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error)
-    }
-    return null
-  }
 
   const loginWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true)
@@ -160,7 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errorMsg)
       setShowErrorModal(true)
       setIsLoading(false)
-
       return
     }
 
@@ -171,8 +137,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errorMsg)
       setShowErrorModal(true)
       setIsLoading(false)
-
       return
+    }
+
+    //Guardar el token JWT que devuelve el backend
+    if (data.token) {
+      localStorage.setItem(LS_TOKEN_KEY, data.token)
+      console.log("Token JWT guardado en localStorage")
+    } else {
+      console.warn("La respuesta no contiene un token JWT")
     }
 
     const userWithRole = data.usuario
@@ -212,7 +185,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errorMsg)
       setShowErrorModal(true)
       setIsLoading(false)
-
       return
     }
 
@@ -223,13 +195,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errorMsg)
       setShowErrorModal(true)
       setIsLoading(false)
-
       return
+    }
+
+    //CAMBIO CRÍTICO: Guardar el token JWT que devuelve el backend
+    if (data.token) {
+      localStorage.setItem(LS_TOKEN_KEY, data.token)
+      console.log("Token JWT guardado en localStorage")
+    } else {
+      console.warn("La respuesta no contiene un token JWT")
     }
 
     const userWithRole = data.usuario
     if (userWithRole) {
-
       if (!userWithRole.iD_RolUsuario) {
         userWithRole.iD_RolUsuario = 1
       }
@@ -281,14 +259,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         "publicidades.manage",
         "profile.view",
       ],
-
       Comercio: [
         "comercios.view",
         "reservas.view",
         "publicidades.view",
         "profile.view",
       ],
-
       Usuario: [
         "reservas.view",
         "resenias.view",
@@ -297,8 +273,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const hasPermission = rolePermissions[userRole]?.includes(perm) ?? false
-    console.log("Permiso", perm, "para rol", userRole, ":", hasPermission)
-
     return hasPermission
   }
 
@@ -324,25 +298,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       {children}
-      <ErrorModal isOpen={showErrorModal} onClose={clearError} title="Error" message={error || ""} />
+      <ErrorModal
+        isOpen={showErrorModal}
+        errorMessage={error ?? "Ha ocurrido un error"}
+        onClose={clearError}
+      />
     </AuthContext.Provider>
   )
 }
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider")
-  return ctx
-}
-
-export function useRequireAuth() {
-  const { isAuthenticated, isLoading } = useAuth()
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      window.location.href = "/auth/login"
-    }
-  }, [isAuthenticated, isLoading])
-
-  return { isAuthenticated, isLoading }
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
 }
