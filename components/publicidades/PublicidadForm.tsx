@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { type Publicidad, type Comercio, publicidadService, comercioService } from "../../services"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 
 interface PublicidadFormProps {
   isOpen: boolean
@@ -35,7 +35,7 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
   const [loadingData, setLoadingData] = useState(false)
   const [loadingComercios, setLoadingComercios] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const { showSuccess, showError, showWarning } = useNotifications()
   const isEditing = !!publicidadId
 
   // Cargar datos de la publicidad si estamos editando
@@ -51,11 +51,7 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
         })
         .catch((error) => {
           console.error("Error al cargar publicidad:", error)
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información de la publicidad",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.publicidades.error.load, error)
           onClose()
           setLoadingData(false)
         })
@@ -64,7 +60,7 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
       setPublicidad({ ...initialPublicidad })
       setErrors({})
     }
-  }, [isOpen, publicidadId, isEditing, onClose, toast])
+  }, [isOpen, publicidadId, isEditing])
 
   // Cargar comercios
   useEffect(() => {
@@ -79,17 +75,13 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
         })
         .catch((error) => {
           console.error("Error al cargar comercios:", error)
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar los comercios",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.publicidades.error.load, error)
         })
         .finally(() => {
           setLoadingComercios(false)
         })
     }
-  }, [isOpen, toast])
+  }, [isOpen, showError])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement
@@ -163,6 +155,7 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
     e.preventDefault()
 
     if (!validateForm()) {
+      showWarning(NOTIFICATION_MESSAGES.validation.form)
       return
     }
 
@@ -180,28 +173,19 @@ export function PublicidadForm({ isOpen, onClose, onSuccess, publicidadId }: Pub
 
       if (isEditing && publicidadId) {
         await publicidadService.update(publicidadId, publicidadData)
-        toast({
-          title: "Éxito",
-          description: "Publicidad actualizada correctamente",
-        })
+        showSuccess(NOTIFICATION_MESSAGES.publicidades.updated)
       } else {
         await publicidadService.create(publicidadData)
-        toast({
-          title: "Éxito",
-          description: "Publicidad creada correctamente",
-        })
+        showSuccess(NOTIFICATION_MESSAGES.publicidades.created)
       }
       onSuccess()
       onClose()
     } catch (error) {
       console.error("Error al guardar publicidad:", error)
-      toast({
-        title: "Error",
-        description: `No se pudo ${isEditing ? "actualizar" : "crear"} la publicidad. ${
-          error instanceof Error ? error.message : ""
-        }`,
-        variant: "destructive",
-      })
+      const errorMessage = isEditing 
+        ? NOTIFICATION_MESSAGES.publicidades.error.update
+        : NOTIFICATION_MESSAGES.publicidades.error.create
+      showError(errorMessage, error instanceof Error ? error : undefined)
     } finally {
       setLoading(false)
     }

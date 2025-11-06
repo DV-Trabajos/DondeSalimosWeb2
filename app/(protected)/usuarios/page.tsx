@@ -9,7 +9,7 @@ import { Loader2, Pencil, Trash2, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { UsuarioForm } from "@/components/usuarios/UsuarioForm"
 import { DeleteConfirmation } from "@/components/comercios/DeleteConfirmation"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 import { type Usuario, type RolUsuario, usuarioService, rolUsuarioService } from "../../../services"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
@@ -26,7 +26,7 @@ export default function UsuariosPage() {
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
-  const { toast } = useToast()
+  const { showSuccess, showError } = useNotifications()
   const { checkUserPermission } = useAuth()
 
   // Verificar permisos
@@ -113,10 +113,9 @@ export default function UsuariosPage() {
 
       // Primero eliminamos el usuario de la API
       await usuarioService.delete(selectedUsuarioId)
-
-      toast({
-        title: "Éxito",
-        description: "Usuario eliminado correctamente",
+      showSuccess({
+        title: NOTIFICATION_MESSAGES.usuarios.deleted.title,
+        description: `${selectedUsuario?.nombreUsuario} ha sido eliminado del sistema`,
       })
       loadData() // Recargar la lista después de eliminar
     } catch (error) {

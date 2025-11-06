@@ -26,9 +26,10 @@ export default function ReseniasPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const { toast } = useToast()
   const { checkUserPermission } = useAuth()
+  const { user } = useAuth()
 
-  // Verificar permisos
-  const hasPermission = checkUserPermission("resenias.manage")
+  const hasPermission = user !== null // Todos los usuarios autenticados
+  const isAdmin = user?.iD_RolUsuario === 2 // Solo admins pueden ver todo
 
   // Cargar reseñas
   const loadData = async () => {
@@ -108,92 +109,83 @@ export default function ReseniasPage() {
   return (
     <ProtectedRoute>
       <div className="container mx-auto py-10">
-        {!hasPermission ? (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Acceso denegado</AlertTitle>
-            <AlertDescription>No tienes permisos para gestionar reseñas.</AlertDescription>
-          </Alert>
-        ) : (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Reseñas</CardTitle>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nueva Reseña
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Buscar reseñas..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Reseñas</CardTitle>
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Reseña
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar reseñas..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
 
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : (
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Usuario</TableHead>
-                        <TableHead>Comercio</TableHead>
-                        <TableHead>Comentario</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Fecha Creación</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Comercio</TableHead>
+                    <TableHead>Comentario</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fecha Creación</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredResenias.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No se encontraron reseñas
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredResenias.map((resenia) => (
+                      <TableRow key={`resenia-${resenia.iD_Resenia}`}>
+                        <TableCell>{resenia.iD_Resenia}</TableCell>
+                        <TableCell>{resenia.usuarioNombre || "Desconocido"}</TableCell>
+                        <TableCell>{resenia.comercioNombre || "Desconocido"}</TableCell>
+                        <TableCell className="max-w-xs truncate">{resenia.comentario}</TableCell>
+                        <TableCell>
+                          <Badge variant={resenia.estado ? "success" : "destructive"}>
+                            {resenia.estado ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{new Date(resenia.fechaCreacion).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(resenia.iD_Resenia)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(resenia.iD_Resenia)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredResenias.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No se encontraron reseñas
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredResenias.map((resenia) => (
-                          <TableRow key={`resenia-${resenia.iD_Resenia}`}>
-                            <TableCell>{resenia.iD_Resenia}</TableCell>
-                            <TableCell>{resenia.usuarioNombre || "Desconocido"}</TableCell>
-                            <TableCell>{resenia.comercioNombre || "Desconocido"}</TableCell>
-                            <TableCell className="max-w-xs truncate">{resenia.comentario}</TableCell>
-                            <TableCell>
-                              <Badge variant={resenia.estado ? "success" : "destructive"}>
-                                {resenia.estado ? "Activo" : "Inactivo"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{new Date(resenia.fechaCreacion).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleEdit(resenia.iD_Resenia)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(resenia.iD_Resenia)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
         {/* Formulario de reseña */}
         <ReseniaForm
           isOpen={isFormOpen}

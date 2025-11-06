@@ -17,7 +17,8 @@ import {
   comercioService,
   usuarioService,
 } from "../../services"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface ReseniaFormProps {
   isOpen: boolean
@@ -42,8 +43,12 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
   const [loadingComercios, setLoadingComercios] = useState(false)
   const [loadingUsuarios, setLoadingUsuarios] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const { showSuccess, showError, showWarning } = useNotifications()
+  const { user } = useAuth()
   const isEditing = !!reseniaId
+
+  // Determinar si el usuario actual es administrador
+  const isAdmin = user?.iD_RolUsuario === 2 // 2 = Administrador
 
   // Cargar datos de la reseña si estamos editando
   useEffect(() => {
@@ -57,20 +62,20 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
           setLoadingData(false)
         })
         .catch((error) => {
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información de la reseña",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.comercios.error.load, error)
           onClose()
           setLoadingData(false)
         })
     } else if (isOpen && !isEditing) {
       // Asegurarse de que se reinicie el formulario con valores iniciales
-      setResenia({ ...initialResenia })
+      // Si es usuario regular, pre-asignar su ID
+      setResenia({ 
+        ...initialResenia,
+        iD_Usuario: isAdmin ? 0 : (user?.iD_Usuario || 0)
+      })
       setErrors({})
-    }
-  }, [isOpen, reseniaId, isEditing, onClose, toast])
+        }
+  }, [isOpen, reseniaId, isEditing])
 
   // Cargar comercios y usuarios
   useEffect(() => {
@@ -85,18 +90,14 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
           setUsuarios(usuariosData.filter((usuario) => usuario.estado))
         })
         .catch((error) => {
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar los datos necesarios",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.comercios.error.load, error)
         })
         .finally(() => {
           setLoadingComercios(false)
           setLoadingUsuarios(false)
         })
     }
-  }, [isOpen, toast])
+  }, [isOpen, showError])
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -146,6 +147,7 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
     e.preventDefault()
 
     if (!validateForm()) {
+      showWarning(NOTIFICATION_MESSAGES.validation.form)
       return
     }
 
@@ -162,27 +164,25 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
       
       if (isEditing && reseniaId) {
         await reseniaService.update(reseniaId, reseniaData)
-        toast({
-          title: "Éxito",
-          description: "Reseña actualizada correctamente",
+        showSuccess({
+          title: NOTIFICATION_MESSAGES.reservas.updated.title,
+          description: "Tu reseña ha sido modificada exitosamente",
         })
       } else {
         await reseniaService.create(reseniaData)
-        toast({
-          title: "Éxito",
-          description: "Reseña creada correctamente",
+        showSuccess({
+          title: NOTIFICATION_MESSAGES.reservas.created.title,
+          description: `Reseña confirmada`,
         })
       }
       onSuccess()
       onClose()
     } catch (error) {
-      toast({
-        title: "Error",
-        description: `No se pudo ${isEditing ? "actualizar" : "crear"} la reseña. ${
-          error instanceof Error ? error.message : ""
-        }`,
-        variant: "destructive",
-      })
+      console.error("Error al guardar reseña:", error)
+      const errorMessage = isEditing 
+        ? NOTIFICATION_MESSAGES.resenias.error.update
+        : NOTIFICATION_MESSAGES.resenias.error.create
+      showError(errorMessage, error instanceof Error ? error : undefined)
     } finally {
       setLoading(false)
     }
@@ -202,35 +202,49 @@ export function ReseniaForm({ isOpen, onClose, onSuccess, reseniaId }: ReseniaFo
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="iD_Usuario" className="flex items-center gap-1">
-                  Usuario {errors.iD_Usuario && <AlertCircle className="h-4 w-4 text-destructive" />}
-                  {loadingUsuarios && <Loader2 className="inline h-4 w-4 animate-spin ml-2" />}
-                </Label>
-                <Select
-                  value={resenia.iD_Usuario ? resenia.iD_Usuario.toString() : ""}
-                  onValueChange={(value) => handleSelectChange("iD_Usuario", value)}
-                  disabled={loadingUsuarios || usuarios.length === 0}
-                >
-                  <SelectTrigger className={errors.iD_Usuario ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Seleccionar usuario" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {usuarios.length > 0 ? (
-                      usuarios.map((usuario) => (
-                        <SelectItem key={`usuario-${usuario.iD_Usuario}`} value={usuario.iD_Usuario.toString()}>
-                          {usuario.nombreUsuario} ({usuario.correo})
+              {/* Campo de usuario - Solo visible para administradores */}
+              {isAdmin ? (
+                <div className="space-y-2">
+                  <Label htmlFor="iD_Usuario" className="flex items-center gap-1">
+                    Usuario {errors.iD_Usuario && <AlertCircle className="h-4 w-4 text-destructive" />}
+                    {loadingUsuarios && <Loader2 className="inline h-4 w-4 animate-spin ml-2" />}
+                  </Label>
+                  <Select
+                    value={resenia.iD_Usuario ? resenia.iD_Usuario.toString() : ""}
+                    onValueChange={(value) => handleSelectChange("iD_Usuario", value)}
+                    disabled={loadingUsuarios || usuarios.length === 0}
+                  >
+                    <SelectTrigger className={errors.iD_Usuario ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Seleccionar usuario" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {usuarios.length > 0 ? (
+                        usuarios.map((usuario) => (
+                          <SelectItem key={`usuario-${usuario.iD_Usuario}`} value={usuario.iD_Usuario.toString()}>
+                            {usuario.nombreUsuario} ({usuario.correo})
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem key="no-usuarios" value="no-disponible" disabled>
+                          No hay usuarios disponibles
                         </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem key="no-usuarios" value="no-disponible" disabled>
-                        No hay usuarios disponibles
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {errors.iD_Usuario && <p className="text-sm text-destructive">{errors.iD_Usuario}</p>}
-              </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {errors.iD_Usuario && <p className="text-sm text-destructive">{errors.iD_Usuario}</p>}
+                </div>
+              ) : (
+                // Para usuarios regulares, mostrar campo de solo lectura
+                <div className="space-y-2">
+                  <Label htmlFor="usuario-info">Usuario</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md border border-input">
+                    <p className="text-sm">{user?.nombreUsuario} ({user?.correo})</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    La reseña se creará con tu usuario
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="iD_Comercio" className="flex items-center gap-1">

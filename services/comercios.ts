@@ -1,6 +1,23 @@
 import { API_BASE_URL, fetchWithErrorHandling } from "./api";
 import type { Comercio } from "./types";
 
+// Función auxiliar para convertir hora HH:MM a formato TimeSpan HH:MM:SS
+const formatearHoraTimeSpan = (hora: string): string => {
+  // Si ya tiene formato TimeSpan (HH:MM:SS), devolverlo tal cual
+  if (/^\d{2}:\d{2}:\d{2}$/.test(hora)) {
+    return hora;
+  }
+
+  // Si tiene formato HH:MM, agregar :00 al final
+  if (/^\d{2}:\d{2}$/.test(hora)) {
+    return `${hora}:00`;
+  }
+
+  // Si no tiene formato válido, devolver hora por defecto
+  console.warn(`Formato de hora inválido: ${hora}, usando valor por defecto`);
+  return "00:00:00";
+};
+
 export const comercioService = {
   getAll: async (): Promise<Comercio[]> => {
     const comercios = await fetchWithErrorHandling(`${API_BASE_URL}/comercios/listado`);
@@ -46,8 +63,8 @@ export const comercioService = {
       tipoDocumento: comercio.tipoDocumento,
       nroDocumento: comercio.nroDocumento,
       direccion: comercio.direccion,
-      horaIngreso: comercio.horaIngreso,
-      horaCierre: comercio.horaCierre,
+      horaIngreso: formatearHoraTimeSpan(comercio.horaIngreso),
+      horaCierre: formatearHoraTimeSpan(comercio.horaCierre),
       correo: comercio.correo,
       telefono: comercio.telefono,
       estado: Boolean(comercio.estado),
@@ -65,6 +82,8 @@ export const comercioService = {
     const comercioToSend = {
       ...comercio,
       iD_Comercio: id,
+      horaIngreso: comercio.horaIngreso ? formatearHoraTimeSpan(comercio.horaIngreso) : undefined,
+      horaCierre: comercio.horaCierre ? formatearHoraTimeSpan(comercio.horaCierre) : undefined,
       capacidad: Number(comercio.capacidad),
       mesas: Number(comercio.mesas),
       iD_TipoComercio: Number(comercio.iD_TipoComercio),

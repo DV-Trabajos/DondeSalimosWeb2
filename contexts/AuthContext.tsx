@@ -1,11 +1,10 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState, useCallback } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import type { Usuario } from "@/services"
 import { ErrorModal } from "@/components/ui/error-modal"
-import { validateUserSession } from "@/services/api"
 
 type AuthContextType = {
   user: Usuario | null
@@ -56,60 +55,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [showErrorModal, setShowErrorModal] = useState(false)
   const router = useRouter()
 
-  // Función para validar la sesión actual
-  const checkSession = useCallback(async () => {
-    const storedUser = safeParse<Usuario>(typeof window !== "undefined" ? localStorage.getItem(LS_USER_KEY) : null)
-    
-    if (!storedUser) {
-      return
-    }
-    
-    try {
-      const isValid = await validateUserSession(storedUser.iD_Usuario)
-      
-      if (!isValid) {
-        setUser(null)
-        localStorage.removeItem(LS_USER_KEY)
-        localStorage.removeItem(LS_TOKEN_KEY)
-        router.push("/auth/login")
-      } else {
-        console.log("Sesión válida")
-      }
-    } catch (error) {
-      console.error("Error al validar sesión:", error)
-    }
-  }, [router])
-
   // Restaurar sesión desde localStorage al montar
   useEffect(() => {
     const storedUser = safeParse<Usuario>(typeof window !== "undefined" ? localStorage.getItem(LS_USER_KEY) : null)
+    const storedToken = typeof window !== "undefined" ? localStorage.getItem(LS_TOKEN_KEY) : null
+    
+    console.log("🔄 Restaurando sesión...")
+    console.log("👤 Usuario en localStorage:", storedUser ? "✅ Encontrado" : "❌ No encontrado")
+    console.log("🔑 Token en localStorage:", storedToken ? "✅ Encontrado" : "❌ No encontrado")
+    
     setUser(storedUser)
     setIsLoading(false)
-    
-    // Validar inmediatamente si hay usuario
-    if (storedUser) {
-      checkSession()
-    }
-  }, [checkSession])
+  }, [])
 
-  // Validar cuando la ventana vuelve a tener foco
+  // ⚠️ REMOVIDO: useEffect que validaba al cambiar de pestaña
+  // Este era el código que causaba el logout:
+  /*
   useEffect(() => {
     if (!user) return
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        checkSession()
+        checkSession() // ← Esto te deslogueaba
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [user, checkSession])
+  */
 
   const loginWithGoogleIdToken = async (idToken: string) => {
+    console.log("🔐 Iniciando login con Google...")
     setIsLoading(true)
     setError(null)
     setShowErrorModal(false)
@@ -123,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ idToken }),
       })
     } catch (err) {
+      console.error("❌ Error de conexión:", err)
       const errorMsg = "No se pudo conectar con el servidor"
       setError(errorMsg)
       setShowErrorModal(true)
@@ -130,9 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return
     }
 
+    console.log("📊 Respuesta del servidor:", res.status)
     const data = await res.json()
+    console.log("📦 Datos recibidos:", data)
 
     if (!res.ok) {
+      console.error("❌ Error en login:", data)
       const errorMsg = data?.mensaje || "No fue posible iniciar sesión"
       setError(errorMsg)
       setShowErrorModal(true)
@@ -140,12 +123,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return
     }
 
-    //Guardar el token JWT que devuelve el backend
-    if (data.token) {
-      localStorage.setItem(LS_TOKEN_KEY, data.token)
-      console.log("Token JWT guardado en localStorage")
+    // ⭐ CRÍTICO: El backend devuelve "jwtToken" no "token"
+    const jwtToken = data.jwtToken || data.token
+    
+    if (jwtToken) {
+      localStorage.setItem(LS_TOKEN_KEY, jwtToken)
+      console.log("✅ Token JWT guardado correctamente")
+      console.log("🔑 Token:", jwtToken.substring(0, 50) + "...")
     } else {
-      console.warn("La respuesta no contiene un token JWT")
+      console.error("❌ ERROR CRÍTICO: No se recibió token JWT del backend")
+      console.log("📋 Estructura de respuesta:", Object.keys(data))
     }
 
     const userWithRole = data.usuario
@@ -160,14 +147,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    console.log("👤 Usuario procesado:", userWithRole)
+
+    // Guardar usuario y actualizar estado
     setUser(userWithRole ?? null)
     localStorage.setItem(LS_USER_KEY, JSON.stringify(userWithRole ?? null))
 
-    router.replace("/dashboard")
+    console.log("✅ Login completado exitosamente")
     setIsLoading(false)
+    
+    // Delay para asegurar que todo se guardó
+    setTimeout(() => {
+      console.log("🚀 Redirigiendo a dashboard...")
+      router.replace("/dashboard")
+    }, 200)
   }
 
   const registerWithGoogleIdToken = async (idToken: string, rolUsuario: number) => {
+    console.log("📝 Iniciando registro con Google...")
     setIsLoading(true)
     setError(null)
     setShowErrorModal(false)
@@ -181,6 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ idToken, rolUsuario }),
       })
     } catch (err) {
+      console.error("❌ Error de conexión:", err)
       const errorMsg = "No se pudo conectar con el servidor"
       setError(errorMsg)
       setShowErrorModal(true)
@@ -188,9 +186,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return
     }
 
+    console.log("📊 Respuesta del servidor:", res.status)
     const data = await res.json()
+    console.log("📦 Datos recibidos:", data)
 
     if (!res.ok) {
+      console.error("❌ Error en registro:", data)
       const errorMsg = data?.mensaje || "No se pudo completar el registro"
       setError(errorMsg)
       setShowErrorModal(true)
@@ -198,12 +199,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return
     }
 
-    //CAMBIO CRÍTICO: Guardar el token JWT que devuelve el backend
-    if (data.token) {
-      localStorage.setItem(LS_TOKEN_KEY, data.token)
-      console.log("Token JWT guardado en localStorage")
+    // ⭐ CRÍTICO: El backend devuelve "jwtToken" no "token"
+    const jwtToken = data.jwtToken || data.token
+    
+    if (jwtToken) {
+      localStorage.setItem(LS_TOKEN_KEY, jwtToken)
+      console.log("✅ Token JWT guardado correctamente")
+      console.log("🔑 Token:", jwtToken.substring(0, 50) + "...")
     } else {
-      console.warn("La respuesta no contiene un token JWT")
+      console.error("❌ ERROR CRÍTICO: No se recibió token JWT del backend")
+      console.log("📋 Estructura de respuesta:", Object.keys(data))
     }
 
     const userWithRole = data.usuario
@@ -220,14 +225,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    console.log("👤 Usuario procesado:", userWithRole)
+
+    // Guardar usuario y actualizar estado
     setUser(userWithRole ?? null)
     localStorage.setItem(LS_USER_KEY, JSON.stringify(userWithRole ?? null))
 
-    router.replace("/dashboard")
+    console.log("✅ Registro completado exitosamente")
     setIsLoading(false)
+    
+    // Delay para asegurar que todo se guardó
+    setTimeout(() => {
+      console.log("🚀 Redirigiendo a dashboard...")
+      router.replace("/dashboard")
+    }, 200)
   }
 
   const logout = async () => {
+    console.log("🚪 Cerrando sesión...")
     localStorage.removeItem(LS_USER_KEY)
     localStorage.removeItem(LS_TOKEN_KEY)
     setUser(null)

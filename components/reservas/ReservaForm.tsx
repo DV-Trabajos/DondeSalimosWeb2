@@ -17,7 +17,7 @@ import {
   comercioService,
   usuarioService,
 } from "../../services"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 
 interface ReservaFormProps {
   isOpen: boolean
@@ -44,7 +44,7 @@ export function ReservaForm({ isOpen, onClose, onSuccess, reservaId }: ReservaFo
   const [loadingComercios, setLoadingComercios] = useState(false)
   const [loadingUsuarios, setLoadingUsuarios] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const { showSuccess, showError, showWarning } = useNotifications()
   const isEditing = !!reservaId
 
   // Cargar datos de la reserva si estamos editando
@@ -67,11 +67,7 @@ export function ReservaForm({ isOpen, onClose, onSuccess, reservaId }: ReservaFo
         })
         .catch((error) => {
           console.error("Error al cargar reserva:", error)
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información de la reserva",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.reservas.error.load, error)
           onClose()
           setLoadingData(false)
         })
@@ -86,7 +82,7 @@ export function ReservaForm({ isOpen, onClose, onSuccess, reservaId }: ReservaFo
       })
       setErrors({})
     }
-  }, [isOpen, reservaId, isEditing, onClose, toast])
+  }, [isOpen, reservaId, isEditing])
 
   // Cargar comercios y usuarios
   useEffect(() => {
@@ -102,18 +98,14 @@ export function ReservaForm({ isOpen, onClose, onSuccess, reservaId }: ReservaFo
         })
         .catch((error) => {
           console.error("Error al cargar datos:", error)
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar los datos necesarios",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.reservas.error.load, error)
         })
         .finally(() => {
           setLoadingComercios(false)
           setLoadingUsuarios(false)
         })
     }
-  }, [isOpen, toast])
+  }, [isOpen, showError])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target
@@ -183,6 +175,7 @@ export function ReservaForm({ isOpen, onClose, onSuccess, reservaId }: ReservaFo
     e.preventDefault()
 
     if (!validateForm()) {
+      showWarning(NOTIFICATION_MESSAGES.validation.form)
       return
     }
 
@@ -203,28 +196,25 @@ export function ReservaForm({ isOpen, onClose, onSuccess, reservaId }: ReservaFo
 
       if (isEditing && reservaId) {
         await reservaService.update(reservaId, reservaData)
-        toast({
-          title: "Éxito",
-          description: "Reserva actualizada correctamente",
+        showSuccess({
+          title: NOTIFICATION_MESSAGES.reservas.updated.title,
+          description: "Tu reserva ha sido modificada exitosamente",
         })
       } else {
         await reservaService.create(reservaData)
-        toast({
-          title: "Éxito",
-          description: "Reserva creada correctamente",
+        showSuccess({
+          title: NOTIFICATION_MESSAGES.reservas.created.title,
+          description: `Reserva confirmada para ${reserva.comenzales} personas`,
         })
       }
       onSuccess()
       onClose()
     } catch (error) {
       console.error("Error al guardar reserva:", error)
-      toast({
-        title: "Error",
-        description: `No se pudo ${isEditing ? "actualizar" : "crear"} la reserva. ${
-          error instanceof Error ? error.message : ""
-        }`,
-        variant: "destructive",
-      })
+      const errorMessage = isEditing 
+        ? NOTIFICATION_MESSAGES.reservas.error.update
+        : NOTIFICATION_MESSAGES.reservas.error.create
+      showError(errorMessage, error instanceof Error ? error : undefined)
     } finally {
       setLoading(false)
     }

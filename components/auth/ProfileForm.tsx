@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { usuarioService } from "@/services"
 import { ErrorAlert } from "@/components/ui/error-alert"
-import { mapApiError, getErrorVariant } from "@/utils/errorUtils"
+// ⭐ AGREGAR ESTE IMPORT
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 
 export function ProfileForm() {
   const [loading, setLoading] = useState(false)
@@ -24,7 +24,8 @@ export function ProfileForm() {
   })
 
   const { user, updateUser } = useAuth()
-  const { toast } = useToast()
+  // ⭐ AGREGAR ESTE HOOK
+  const { showSuccess, showError } = useNotifications()
 
   useEffect(() => {
     if (user) {
@@ -74,27 +75,27 @@ export function ProfileForm() {
 
       updateUser(updatedUser)
 
-      // Mostrar mensaje de éxito
-      toast({
-        title: "Perfil actualizado",
-        description: "Tu información se ha guardado correctamente.",
-        variant: "default",
+      // ⭐ MOSTRAR NOTIFICACIÓN TOAST DE ÉXITO
+      showSuccess({
+        title: NOTIFICATION_MESSAGES.perfil.updated.title,
+        description: "Tu información personal ha sido actualizada correctamente",
       })
     } catch (error: unknown) {
       console.error("Error al actualizar perfil:", error)
 
       const errorMessage = error instanceof Error ? error.message : "Error desconocido"
-      const mappedError = mapApiError(errorMessage)
 
-      // Mostrar error en la interfaz
+      // Mostrar error en la interfaz (ErrorAlert)
       setError(errorMessage)
 
-      // También mostrar toast con el error mapeado
-      toast({
-        title: "Error al actualizar perfil",
-        description: mappedError.message,
-        variant: getErrorVariant(mappedError.type),
-      })
+      // ⭐ MOSTRAR NOTIFICACIÓN TOAST DE ERROR
+      showError(
+        {
+          title: NOTIFICATION_MESSAGES.perfil.error.update.title,
+          description: errorMessage, // Usar el mensaje del backend directamente
+        },
+        error instanceof Error ? error : undefined
+      )
     } finally {
       setLoading(false)
     }

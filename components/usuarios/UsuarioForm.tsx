@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Loader2, AlertCircle } from "lucide-react"
 import { type Usuario, type RolUsuario, usuarioService } from "../../services"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 
 interface UsuarioFormProps {
   isOpen: boolean
@@ -34,7 +34,7 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const { showSuccess, showError, showWarning } = useNotifications()
   const isEditing = !!usuarioId
 
   // Cargar datos del usuario si estamos editando
@@ -50,11 +50,7 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
         })
         .catch((error) => {
           console.error("Error al cargar usuario:", error)
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información del usuario",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.usuarios.error.load, error)
           onClose()
           setLoadingData(false)
         })
@@ -63,7 +59,7 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
       setUsuario({ ...initialUsuario })
       setErrors({})
     }
-  }, [isOpen, usuarioId, isEditing, onClose, toast])
+  }, [isOpen, usuarioId, isEditing])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -178,6 +174,7 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
     e.preventDefault()
 
     if (!validateForm()) {
+      showWarning(NOTIFICATION_MESSAGES.validation.form)
       return
     }
 
@@ -232,15 +229,9 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
 
       if (isEditing && usuarioId) {
         await usuarioService.update(usuarioId, usuarioData)
-        toast({
-          title: "Éxito",
-          description: "Usuario actualizado correctamente",
-        })
-      } else {
-        await usuarioService.create(usuarioData)
-        toast({
-          title: "Éxito",
-          description: "Usuario creado correctamente",
+        showSuccess({
+          title: NOTIFICATION_MESSAGES.usuarios.updated.title,
+          description: `${usuario.nombreUsuario} ha sido actualizado correctamente`,
         })
       }
       onSuccess()
@@ -255,18 +246,16 @@ export function UsuarioForm({ isOpen, onClose, onSuccess, usuarioId, roles = [] 
 
         // Si hay un error general, también mostrarlo en el toast
         if (backendErrors.general) {
-          toast({
-            title: "Error",
+          showError({
+            title: NOTIFICATION_MESSAGES.usuarios.error[isEditing ? 'update' : 'create'].title,
             description: backendErrors.general,
-            variant: "destructive",
           })
         }
       } else {
-        toast({
-          title: "Error",
-          description: `No se pudo ${isEditing ? "actualizar" : "crear"} el usuario`,
-          variant: "destructive",
-        })
+        const errorMessage = isEditing 
+          ? NOTIFICATION_MESSAGES.usuarios.error.update
+          : NOTIFICATION_MESSAGES.usuarios.error.create
+        showError(errorMessage)
       }
     } finally {
       setLoading(false)

@@ -142,7 +142,7 @@ export default function RegisterForm() {
                 {initiatingRole === 1 && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white/95 rounded-2xl">
                     <GoogleLogin
-                      onSuccess={(resp) => handleGoogleRegister(resp, 1)}
+                      onSuccess={(resp) => handleGoogleRegister(resp, 16)}
                       onError={() => {
                         toast({ title: "Error", description: "Google Login falló" })
                         setInitiatingRole(null)

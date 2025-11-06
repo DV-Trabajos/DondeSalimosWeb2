@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Loader2, AlertCircle } from "lucide-react"
 import { type TipoComercio, tipoComercioService } from "../../services"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 
 interface TipoComercioFormProps {
   isOpen: boolean
@@ -28,7 +28,7 @@ export function TipoComercioForm({ isOpen, onClose, onSuccess, tipoComercioId }:
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const { showSuccess, showError, showWarning } = useNotifications()
   const isEditing = !!tipoComercioId
 
   // Cargar datos del tipo de comercio si estamos editando
@@ -44,11 +44,7 @@ export function TipoComercioForm({ isOpen, onClose, onSuccess, tipoComercioId }:
         })
         .catch((error) => {
           console.error("Error al cargar tipo de comercio:", error)
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información del tipo de comercio",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.tiposComercios.error.load, error)
           onClose()
           setLoadingData(false)
         })
@@ -57,7 +53,7 @@ export function TipoComercioForm({ isOpen, onClose, onSuccess, tipoComercioId }:
       setTipoComercio({ ...initialTipoComercio })
       setErrors({})
     }
-  }, [isOpen, tipoComercioId, isEditing, onClose, toast])
+  }, [isOpen, tipoComercioId, isEditing])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -84,6 +80,7 @@ export function TipoComercioForm({ isOpen, onClose, onSuccess, tipoComercioId }:
     e.preventDefault()
 
     if (!validateForm()) {
+      showWarning(NOTIFICATION_MESSAGES.validation.form)
       return
     }
 
@@ -100,28 +97,19 @@ export function TipoComercioForm({ isOpen, onClose, onSuccess, tipoComercioId }:
 
       if (isEditing && tipoComercioId) {
         await tipoComercioService.update(tipoComercioId, tipoComercioData)
-        toast({
-          title: "Éxito",
-          description: "Tipo de comercio actualizado correctamente",
-        })
+        showSuccess(NOTIFICATION_MESSAGES.tiposComercios.updated)
       } else {
         await tipoComercioService.create(tipoComercioData)
-        toast({
-          title: "Éxito",
-          description: "Tipo de comercio creado correctamente",
-        })
+        showSuccess(NOTIFICATION_MESSAGES.tiposComercios.created)
       }
       onSuccess()
       onClose()
     } catch (error) {
       console.error("Error al guardar tipo de comercio:", error)
-      toast({
-        title: "Error",
-        description: `No se pudo ${isEditing ? "actualizar" : "crear"} el tipo de comercio. ${
-          error instanceof Error ? error.message : ""
-        }`,
-        variant: "destructive",
-      })
+      const errorMessage = isEditing 
+        ? NOTIFICATION_MESSAGES.tiposComercios.error.update
+        : NOTIFICATION_MESSAGES.tiposComercios.error.create
+      showError(errorMessage, error instanceof Error ? error : undefined)
     } finally {
       setLoading(false)
     }

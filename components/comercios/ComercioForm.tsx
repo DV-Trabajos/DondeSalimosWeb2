@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Loader2, AlertCircle } from "lucide-react"
 import { type Comercio, type TipoComercio, type Usuario, comercioService, usuarioService } from "../../services"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 
 interface ComercioFormProps {
   isOpen: boolean
@@ -48,7 +48,7 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
   const [loadingUsuarios, setLoadingUsuarios] = useState(false)
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const { showSuccess, showError, showWarning } = useNotifications()
   const isEditing = !!comercioId
 
   // Función helper para normalizar el tipo de documento
@@ -87,11 +87,7 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
         })
         .catch((error) => {
           console.error("Error al cargar comercio:", error)
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información del comercio",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.comercios.error.load, error)
           onClose()
           setLoadingData(false)
         })
@@ -101,7 +97,7 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
       setComercio({ ...initialComercio })
       setErrors({})
     }
-  }, [isOpen, comercioId, isEditing, onClose, toast])
+  }, [isOpen, comercioId, isEditing])
 
   // Cargar usuarios para el selector
   useEffect(() => {
@@ -121,18 +117,14 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
         })
         .catch((error) => {
           console.error("Error al cargar usuarios:", error)
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar los usuarios",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.comercios.error.load, error)
           setUsuarios([])
         })
         .finally(() => {
           setLoadingUsuarios(false)
         })
     }
-  }, [isOpen, toast])
+  }, [isOpen])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target
@@ -185,6 +177,34 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
+    // ... validaciones existentes ...
+
+    // ⭐ AGREGAR estas validaciones:
+    if (!comercio.horaIngreso?.trim()) {
+      newErrors.horaIngreso = "La hora de ingreso es obligatoria"
+    }
+
+    if (!comercio.horaCierre?.trim()) {
+      newErrors.horaCierre = "La hora de cierre es obligatoria"
+    }
+
+    // Validar que la hora de cierre sea después de la hora de ingreso
+    // (considerando que puede cerrar después de medianoche)
+    if (comercio.horaIngreso && comercio.horaCierre) {
+      const [horaIng, minIng] = comercio.horaIngreso.split(':').map(Number)
+      const [horaCie, minCie] = comercio.horaCierre.split(':').map(Number)
+      
+      // Si ambas horas son del mismo día (ej: 20:00 a 23:00)
+      // O si cierra después de medianoche (ej: 22:00 a 05:00 es válido)
+      const ingresoMinutos = horaIng * 60 + minIng
+      const cierreMinutos = horaCie * 60 + minCie
+      
+      // Solo validar si cierra el mismo día
+      if (cierreMinutos > ingresoMinutos * 0.5 && cierreMinutos <= ingresoMinutos) {
+        newErrors.horaCierre = "La hora de cierre debe ser posterior a la hora de ingreso"
+      }
+    }
+
     if (!comercio.nombre?.trim()) {
       newErrors.nombre = "El nombre es obligatorio"
     }
@@ -231,11 +251,7 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
     e.preventDefault()
 
     if (!validateForm()) {
-      toast({
-        title: "Error",
-        description: "Por favor, corrige los errores en el formulario",
-        variant: "destructive",
-      })
+      showWarning(NOTIFICATION_MESSAGES.validation.form)
       return
     }
 
@@ -263,28 +279,42 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
 
       if (isEditing && comercioId) {
         await comercioService.update(comercioId, comercioData)
-        toast({
-          title: "Éxito",
-          description: "Comercio actualizado correctamente",
+        showSuccess({
+          title: NOTIFICATION_MESSAGES.comercio.updated.title,
+          description: NOTIFICATION_MESSAGES.comercio.updated.description,
         })
       } else {
         await comercioService.create(comercioData)
-        toast({
-          title: "Éxito",
-          description: "Comercio creado correctamente",
+        showSuccess({
+          title: NOTIFICATION_MESSAGES.comercio.created.title,
+          description: NOTIFICATION_MESSAGES.comercio.created.description,
         })
       }
       onSuccess()
       onClose()
     } catch (error) {
       console.error("Error al guardar comercio:", error)
-      toast({
-        title: "Error",
-        description: `No se pudo ${isEditing ? "actualizar" : "crear"} el comercio. ${
-          error instanceof Error ? error.message : ""
-        }`,
-        variant: "destructive",
-      })
+      
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+      
+      // Mostrar notificación toast
+      showError(
+        isEditing
+          ? NOTIFICATION_MESSAGES.comercio.error.update
+          : NOTIFICATION_MESSAGES.comercio.error.create,
+        error instanceof Error ? error : undefined
+      )
+      
+      // También mostrar el error en el campo específico si es un error de validación
+      if (errorMessage.toLowerCase().includes("documento")) {
+        setErrors({ nroDocumento: errorMessage })
+      } else if (errorMessage.toLowerCase().includes("correo")) {
+        setErrors({ correo: errorMessage })
+      } else if (errorMessage.toLowerCase().includes("telefono") || errorMessage.toLowerCase().includes("teléfono")) {
+        setErrors({ telefono: errorMessage })
+      } else if (errorMessage.toLowerCase().includes("nombre")) {
+        setErrors({ nombre: errorMessage })
+      }
     } finally {
       setLoading(false)
     }
@@ -452,6 +482,41 @@ export function ComercioForm({ isOpen, onClose, onSuccess, comercioId, tiposCome
                   className={errors.direccion ? "border-destructive" : ""}
                 />
                 {errors.direccion && <p className="text-sm text-destructive">{errors.direccion}</p>}
+              </div>
+
+              {/* Campos de Hora de Ingreso y Hora de Cierre */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="horaIngreso" className="flex items-center gap-1">
+                    Hora de Ingreso {errors.horaIngreso && <AlertCircle className="h-4 w-4 text-destructive" />}
+                  </Label>
+                  <Input
+                    id="horaIngreso"
+                    name="horaIngreso"
+                    type="time"
+                    value={comercio.horaIngreso || ""}
+                    onChange={handleChange}
+                    className={errors.horaIngreso ? "border-destructive" : ""}
+                    placeholder="Ej: 20:00"
+                  />
+                  {errors.horaIngreso && <p className="text-sm text-destructive">{errors.horaIngreso}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="horaCierre" className="flex items-center gap-1">
+                    Hora de Cierre {errors.horaCierre && <AlertCircle className="h-4 w-4 text-destructive" />}
+                  </Label>
+                  <Input
+                    id="horaCierre"
+                    name="horaCierre"
+                    type="time"
+                    value={comercio.horaCierre || ""}
+                    onChange={handleChange}
+                    className={errors.horaCierre ? "border-destructive" : ""}
+                    placeholder="Ej: 05:00"
+                  />
+                  {errors.horaCierre && <p className="text-sm text-destructive">{errors.horaCierre}</p>}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

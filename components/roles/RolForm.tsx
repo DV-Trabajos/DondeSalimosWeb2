@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Loader2, AlertCircle } from "lucide-react"
 import { type RolUsuario, rolUsuarioService } from "../../services"
-import { useToast } from "@/components/ui/use-toast"
+import { useNotifications, NOTIFICATION_MESSAGES } from "@/lib/notifications"
 
 interface RolFormProps {
   isOpen: boolean
@@ -28,7 +28,7 @@ export function RolForm({ isOpen, onClose, onSuccess, rolId }: RolFormProps) {
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const { toast } = useToast()
+  const { showSuccess, showError, showWarning } = useNotifications()
   const isEditing = !!rolId
 
   // Cargar datos del rol si estamos editando
@@ -44,11 +44,7 @@ export function RolForm({ isOpen, onClose, onSuccess, rolId }: RolFormProps) {
         })
         .catch((error) => {
           console.error("Error al cargar rol:", error)
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información del rol",
-            variant: "destructive",
-          })
+          showError(NOTIFICATION_MESSAGES.roles.error.load, error)
           onClose()
           setLoadingData(false)
         })
@@ -57,7 +53,7 @@ export function RolForm({ isOpen, onClose, onSuccess, rolId }: RolFormProps) {
       setRol({ ...initialRol })
       setErrors({})
     }
-  }, [isOpen, rolId, isEditing, onClose, toast])
+  }, [isOpen, rolId, isEditing])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -84,6 +80,7 @@ export function RolForm({ isOpen, onClose, onSuccess, rolId }: RolFormProps) {
     e.preventDefault()
 
     if (!validateForm()) {
+      showWarning(NOTIFICATION_MESSAGES.validation.form)
       return
     }
 
@@ -105,29 +102,20 @@ export function RolForm({ isOpen, onClose, onSuccess, rolId }: RolFormProps) {
 
       if (isEditing && rolId) {
         await rolUsuarioService.update(rolId, rolData)
-        toast({
-          title: "Éxito",
-          description: "Rol actualizado correctamente",
-        })
+        showSuccess(NOTIFICATION_MESSAGES.roles.updated)
       } else {
         await rolUsuarioService.create(rolData)
-        toast({
-          title: "Éxito",
-          description: "Rol creado correctamente",
-        })
+        showSuccess(NOTIFICATION_MESSAGES.roles.created)
       }
       onSuccess()
       onClose()
-    } catch (error) {
-      console.error("Error al guardar rol:", error)
-      toast({
-        title: "Error",
-        description: `No se pudo ${isEditing ? "actualizar" : "crear"} el rol. ${
-          error instanceof Error ? error.message : ""
-        }`,
-        variant: "destructive",
-      })
-    } finally {
+      } catch (error) {
+        console.error("Error al guardar rol:", error)
+        const errorMessage = isEditing 
+          ? NOTIFICATION_MESSAGES.roles.error.update
+          : NOTIFICATION_MESSAGES.roles.error.create
+        showError(errorMessage, error instanceof Error ? error : undefined)
+      } finally {
       setLoading(false)
     }
   }
